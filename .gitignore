@@ -396,3 +396,9 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Darwin files
+.DS_Store
+
+# Unity hidden objects
+!Xeno.SourceGenerator~/

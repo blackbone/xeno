@@ -1,0 +1,7 @@
+{
+  "name": "Xeno",
+  "rootNamespace": "Xeno",
+  "allowUnsafeCode": true,
+  "defineConstraints": [
+  ]
+}

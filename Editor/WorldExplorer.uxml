@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <uie:Toolbar>
+        <uie:ToolbarMenu name="world" />
+        <uie:ToolbarSpacer />
+    </uie:Toolbar>
+    <ui:VisualElement name="content" style="flex-grow: 1; flex-direction: row;">
+        <ui:VisualElement style="flex-grow: 0; max-width: 50%; width: 250px;">
+            <uie:Toolbar>
+                <uie:ToolbarSearchField name="systemFilterText" />
+            </uie:Toolbar>
+            <ui:Label style="display: none;" binding-path="systemFilterText"/>
+            <ui:MultiColumnTreeView name="systems" show-border="true" binding-path="systems" width="100%">
+                <ui:Columns reorderable="false">
+                    <ui:Column name="enabled" optional="false" min-width="60px"/>
+                    <ui:Column name="name" optional="false" stretchable="true" min-width="60px"/>
+                    <ui:Column name="time" min-width="60px">
+                    </ui:Column>
+                </ui:Columns>
+            </ui:MultiColumnTreeView>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

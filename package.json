@@ -1,0 +1,17 @@
+{
+  "name": "com.blackbone.xeno",
+  "author": "Blackbone",
+  "displayName": "Xeno",
+  "description": "Xenomorphic dead-beat ECS.",
+  "unity": "2020.3",
+  "version": "2023.1.0",
+  "keywords": [
+    "xeno",
+    "ecs"
+  ],
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/blackbone/xeno"
+  }
+}

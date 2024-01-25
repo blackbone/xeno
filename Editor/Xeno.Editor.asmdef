@@ -1,0 +1,7 @@
+{
+  "name": "Xeno.Editor",
+  "rootNamespace": "Xeno.Editor",
+  "references": [
+    "Xeno"
+  ]
+}

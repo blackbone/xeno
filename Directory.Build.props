@@ -1,0 +1,8 @@
+<Project>
+    <PropertyGroup>
+        <OutputPath>./src~\.bin\$(Configuration)</OutputPath>
+        <IntermediateOutputPath>./src~\.obj\$(Configuration)</IntermediateOutputPath>
+        <BaseIntermediateOutputPath>./src~\.obj\$(Configuration)</BaseIntermediateOutputPath>
+        <MSBUildProjectExtensionsPath>./src~\.obj</MSBUildProjectExtensionsPath>
+    </PropertyGroup>
+</Project>
