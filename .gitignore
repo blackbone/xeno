@@ -401,4 +401,4 @@ FodyWeavers.xsd
 .DS_Store
 
 # Unity hidden objects
-!Xeno.SourceGenerator~/
+!src~/

@@ -24,7 +24,7 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity<T>(in T component)
-            where T : unmanaged, IComponent
+            where T : struct, IComponent
         {
             var entity = entities.Create();
             var components = Components<T>();
@@ -34,8 +34,8 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity<T1, T2>(in T1 component1, in T2 component2)
-            where T1 : unmanaged, IComponent
-            where T2 : unmanaged, IComponent
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
         {
             var entity = entities.Create();
             Components<T1>().Add(entity.Id, component1);
@@ -45,9 +45,9 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity<T1, T2, T3>(in T1 component1, in T2 component2, in T3 component3)
-            where T1 : unmanaged, IComponent
-            where T2 : unmanaged, IComponent
-            where T3 : unmanaged, IComponent
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
         {
             var entity = entities.Create();
             Components<T1>().Add(entity.Id, component1);
@@ -58,10 +58,10 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity<T1, T2, T3, T4>(in T1 component1, in T2 component2, in T3 component3, in T4 component4)
-            where T1 : unmanaged, IComponent
-            where T2 : unmanaged, IComponent
-            where T3 : unmanaged, IComponent
-            where T4 : unmanaged, IComponent
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
         {
             var entity = entities.Create();
             Components<T1>().Add(entity.Id, component1);
@@ -74,10 +74,11 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DeleteEntity(in Entity entity)
         {
-            if (entities.Ref(entity.Id).Version != entity.Version) throw new InvalidOperationException();
+            if (entities.Count <= entity.Id) return;
+            if (entities.Ref(entity.Id).Version != entity.Version) return;
             entities.Remove(entity.Id);
-            // for (var i = 0; i < Component.Index; i++)
-            //     componentStores[(uint)i].RemoveInternal(entity.Id);
+            for (var i = 0; i < Component.Index; i++)
+                componentStores.AtRO((uint)i)?.RemoveInternal(entity.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -85,20 +86,20 @@ namespace Xeno
         {
             for (uint i = 0; i < entities.Count; i++)
             {
-                // if (disabled.Get(i)) continue;
+                if (disabled.Get(i)) continue;
                 yield return entities.Ref(i);
             }
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Entities<T>(ComponentDelegate<T> update)
-            where T : unmanaged, IComponent
+            where T : struct, IComponent
         {
             var cs1 = componentStores.AtRO(Component<T>.Index).As<T>();
             var count = cs1.Count();
             for (uint i = 0; i < count; i++)
             {
-                var entityId = cs1.GetEntity(i);
+                // var entityId = cs1.GetEntity(i);
                 // if (disabled.Get(entityId)) continue;
 
                 update(ref cs1.RefAt(i));
@@ -107,7 +108,7 @@ namespace Xeno
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Entities<T>(DeltaComponentDelegate<T> update)
-            where T : unmanaged, IComponent
+            where T : struct, IComponent
         {
              var cs1 =  componentStores.AtRO(Component<T>.Index).As<T>();
             var count = cs1.Count();
@@ -122,8 +123,8 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Entities<T1, T2>(ComponentDelegate<T1, T2> update)
-            where T1 : unmanaged, IComponent
-            where T2 : unmanaged, IComponent
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
         {
             var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
@@ -140,9 +141,9 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Entities<T1, T2, T3>(ComponentDelegate<T1, T2, T3> update)
-            where T1 : unmanaged, IComponent
-            where T2 : unmanaged, IComponent
-            where T3 : unmanaged, IComponent
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
         {
             var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
@@ -161,15 +162,15 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Entities<T1, T2, T3, T4>(ComponentDelegate<T1, T2, T3, T4> update)
-            where T1 : unmanaged, IComponent
-            where T2 : unmanaged, IComponent
-            where T3 : unmanaged, IComponent
-            where T4 : unmanaged, IComponent
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
         {
-             var cs1 =  componentStores.AtRO(Component<T1>.Index).As<T1>();
-             var cs2 =  componentStores.AtRO(Component<T2>.Index).As<T2>();
-             var cs3 =  componentStores.AtRO(Component<T3>.Index).As<T3>();
-             var cs4 =  componentStores.AtRO(Component<T4>.Index).As<T4>();
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
+            var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
+            var cs4 = componentStores.AtRO(Component<T4>.Index).As<T4>();
             var count = cs1.Count();
             for (uint i = 0; i < count; i++)
             {
@@ -181,6 +182,87 @@ namespace Xeno
 
                 update(ref cs1.RefAt(i), ref cs2.Ref(entityId), ref cs3.Ref(entityId), ref cs4.Ref(entityId));
             }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Count<T1>()
+            where T1 : struct, IComponent
+        {
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var count = cs1.Count();
+            return (int)count;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Count<T1, T2>()
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+        {
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
+            var count = cs1.Count();
+            var result = 0;
+            for (uint i = 0; i < count; i++)
+            {
+                var entityId = cs1.GetEntity(i);
+                // if (disabled.Get(entityId)) continue;
+                if (!cs2.Has(entityId)) continue;
+
+                result++;
+            }
+
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Count<T1, T2, T3>()
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+        {
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
+            var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
+            var count = cs1.Count();
+            var result = 0;
+            for (uint i = 0; i < count; i++)
+            {
+                var entityId = cs1.GetEntity(i);
+                // if (disabled.Get(entityId)) continue;
+                if (!cs2.Has(entityId)) continue;
+                if (!cs3.Has(entityId)) continue;
+
+                result++;
+            }
+
+            return result;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Count<T1, T2, T3, T4>()
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
+        {
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
+            var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
+            var cs4 = componentStores.AtRO(Component<T4>.Index).As<T4>();
+            var count = cs1.Count();
+            var result = 0;
+            for (uint i = 0; i < count; i++)
+            {
+                var entityId = cs1.GetEntity(i);
+                // if (disabled.Get(entityId)) continue;
+                if (!cs2.Has(entityId)) continue;
+                if (!cs3.Has(entityId)) continue;
+                if (!cs4.Has(entityId)) continue;
+
+                result++;
+            }
+
+            return result;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

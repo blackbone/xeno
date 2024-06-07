@@ -33,7 +33,7 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ComponentStore<T> Components<T>() where T : unmanaged, IComponent
+        internal ComponentStore<T> Components<T>() where T : struct, IComponent
         {
             ref var slot = ref componentStores.At(Component<T>.Index);
             if (slot != null) return slot.As<T>();

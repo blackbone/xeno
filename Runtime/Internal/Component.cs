@@ -7,7 +7,7 @@ namespace Xeno
         protected internal static uint Index;
     }
 
-    internal abstract class Component<T> : Component where T : unmanaged, IComponent
+    internal abstract class Component<T> : Component where T : struct, IComponent
     {
         private static T _defaultValue;
 

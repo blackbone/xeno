@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
         <Nullable>disable</Nullable>
         <RootNamespace>Xeno</RootNamespace>
         <ImplicitUsings>false</ImplicitUsings>
@@ -17,6 +16,7 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageTags>ecs dotnet unity</PackageTags>
+        <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -46,10 +46,6 @@
         <None Remove="Editor\**"/>
         <None Remove="obj~\**"/>
         <None Remove="**\*.meta"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="src~\Xeno.SourceGenerator\Xeno.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     </ItemGroup>
 
     <ItemGroup>

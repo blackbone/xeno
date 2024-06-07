@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Xeno.SourceGenerator.Sample</RootNamespace>
+        <OutputType>Exe</OutputType>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <!-- Native Aot Props-->
+        <PublishAot>true</PublishAot>
+        <OptimizationPreference>Speed</OptimizationPreference>
+        <TrimMode>full</TrimMode>
+        <DebuggerSupport>false</DebuggerSupport>
+        <EventSourceSupport>false</EventSourceSupport>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+        <StackTraceSupport>false</StackTraceSupport>
+        <UseSystemResourceKeys>true</UseSystemResourceKeys>
+        <Platform>osx-arm64</Platform>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Xeno.SourceGenerator/Xeno.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="../../Xeno.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="obj~/**"/>
+        <Compile Remove="obj~/**"/>
+        <EmbeddedResource Remove="obj~/**"/>
+    </ItemGroup>
+
+</Project>
