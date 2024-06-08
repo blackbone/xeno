@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using Xeno.Collections;
 
@@ -10,6 +11,7 @@ namespace Xeno
 
         private GrowOnlyListUInt freeSlots;
         private GrowOnlyListUInt versions; // first bit of version
+        internal GrowOnlyList<FixedBitSet> archetypes;
         
         internal uint Count;
 
@@ -21,12 +23,23 @@ namespace Xeno
             this.world = world;
             freeSlots = new GrowOnlyListUInt(1024);
             versions = new GrowOnlyListUInt(1024);
+            archetypes = new GrowOnlyList<FixedBitSet>(1024);
             Count = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Entity Ref(uint index)
-            => new(index, versions[index] & VersionMask, world.Id);
+        public Entity At(uint index) => new(index, versions[index] & VersionMask, world.Id);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool With(in FixedBitSet componentMask, ref uint from, ref Span<Entity> entities, ref int count)
+        {
+            var j = 0;
+            for (;from < archetypes.Count && j < entities.Length; from++)
+                if (archetypes[from].Includes(componentMask))
+                    entities[j++] = new Entity(from, versions[from] & VersionMask, world.Id);
+            count = j;
+            return from == entities.Length;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity Create()
@@ -36,10 +49,11 @@ namespace Xeno
             {
                 var index = freeSlots.TakeLast();
                 versions[index] = (versions[index] & VersionMask) + 1;
-                return Ref(index);
+                return At(index);
             }
 
             versions.Add(0);
+            archetypes.Add(default); // zeroes
             return new Entity(Count - 1, 0, world.Id);
         }
 
@@ -48,11 +62,16 @@ namespace Xeno
         {
             Count--;
             versions[index] |= EmptyMask;
+            archetypes[index] = default;
             freeSlots.Add(index);
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Ensure(in int capacity) => versions.Ensure(capacity);
+        public void Ensure(in int capacity)
+        {
+            versions.Ensure(capacity);
+            archetypes.Ensure(capacity);
+        }
     }
 }

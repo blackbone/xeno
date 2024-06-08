@@ -4,23 +4,36 @@ namespace Xeno.Collections
 {
     public unsafe struct FixedBitSet
     {
-        private fixed ulong data[16];
+        internal const int MASK_SIZE = 512;
+        internal const int MASK_ULONG_SIZE = MASK_SIZE / sizeof(ulong);
+        internal fixed ulong data[MASK_ULONG_SIZE]; // 512 flags must be enough
+    }
+
+    internal static class FixedBitSetExtensions
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe bool Get(this FixedBitSet origin, uint index) => (origin.data[index / 64] & 1ul << (int)(index % 64)) != 0;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe void Set(this FixedBitSet origin, uint index) => origin.data[index / 64] |= 1ul << (int)(index % 64);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Set(uint index) => data[index / 64] |= 1ul << (int)(index % 64);
-
+        internal static unsafe void Unset(this FixedBitSet origin, uint index) => origin.data[index / 64] |= 1ul << (int)(index % 64);
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Unset(uint index) => data[index / 64] |= 1ul << (int)(index % 64);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Get(uint index) => (data[index / 64] & 1ul << (int)(index % 64)) != 0;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void RemoveAndSwapBack(uint index, uint lastIndex)
+        internal static unsafe void Reset(this FixedBitSet origin)
         {
-            if (Get(lastIndex)) Set(index);
-            else Unset(index);
-            Unset(lastIndex);
+            for (var i = 0; i < FixedBitSet.MASK_ULONG_SIZE; i++)
+                origin.data[i] = 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe bool Includes(this FixedBitSet origin, in FixedBitSet other)
+        {
+            var result = true;
+            for (var i = 0; i < FixedBitSet.MASK_ULONG_SIZE; i++)
+                result &= (origin.data[i] & other.data[i]) == other.data[i];
+            return result;
         }
     }
 }

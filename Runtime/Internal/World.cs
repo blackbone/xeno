@@ -50,5 +50,13 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Disable(uint entityId)
             => disabled.Set(entityId);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void AddToArchetype<T>(uint entityId) where T : struct, IComponent
+            => entities.archetypes[entityId].Set(Component<T>.Index);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void RemoveFromArchetype<T>(uint entityId) where T : struct, IComponent
+            => entities.archetypes[entityId].Unset(Component<T>.Index);
     }
 }

@@ -65,6 +65,18 @@ namespace Xeno.Collections
             count--;
             return this[count];
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Ensure(in int capacity)
+        {
+            if (capacity >= this.capacity) // resize container array
+            {
+                var n = (int)(capacity / step + 1);
+                Array.Resize(ref data, n);
+                var i = 0;
+                while (i < n) data[i++] ??= new T[step];
+            }
+        }
     }
     
     public struct GrowOnlyListUInt
