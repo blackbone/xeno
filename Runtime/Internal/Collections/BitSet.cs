@@ -26,5 +26,8 @@ namespace Xeno.Collections
             else Unset(index);
             Unset(lastIndex);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Ensure(in int capacity) => data.Ensure(capacity);
     }
 }

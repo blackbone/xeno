@@ -69,5 +69,17 @@ namespace Xeno.Collections
 
             return value;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Ensure<T>(this ref SwapBackList<T> list, in uint capacity) where T : struct
+        {
+            var count = capacity / list.step + 1;
+            if (count >= list.data.Length)
+            {
+                var size = list.data.Length;
+                Array.Resize(ref list.data, (int)count);
+                while (size < count) list.data[size++] = new T[list.step];
+            }
+        }
     }
 }

@@ -119,12 +119,24 @@ namespace Xeno.Collections
             this[count] = value;
             count++;
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public uint TakeLast()
         {
             count--;
             return this[count];
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Ensure(in int capacity)
+        {
+            if (capacity >= this.capacity) // resize container array
+            {
+                var n = (int)(capacity / step + 1);
+                Array.Resize(ref data, n);
+                var i = 0;
+                while (i < n) data[i++] ??= new uint[step];
+            }
         }
     }
 }

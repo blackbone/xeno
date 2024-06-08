@@ -324,5 +324,14 @@ namespace Xeno
             
             defaultSystemGroup.DetachFromWorld(this);
         }
+
+        public void EnsureCapacity(int capacity)
+            => entities.Ensure(capacity);
+        
+        public void EnsureCapacity<T>(int capacity) where T : struct, IComponent
+        {
+            var cs = componentStores.At(Component<T>.Index) ??= new ComponentStore<T>();
+            cs.As<T>().Ensure(capacity);
+        }
     }
 }

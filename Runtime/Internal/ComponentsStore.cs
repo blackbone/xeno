@@ -17,19 +17,18 @@ namespace Xeno
     [StructLayout(LayoutKind.Sequential)]
     internal sealed class ComponentStore<T> : ComponentStore where T : struct, IComponent
     {
-        public readonly bool Allocated;
         internal BitSet disabled;
         internal SparseSet mapping;
         internal SwapBackList<T> components;
 
         public ComponentStore(uint density = 1024)
         {
-            Allocated = true;
             disabled = new BitSet(density);
             mapping = new SparseSet(density);
             components = new SwapBackList<T>(density);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal override void RemoveInternal(uint entityId)
         {
             if (!mapping.Contains(entityId)) return;
@@ -118,5 +117,13 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint GetEntity<T>(this ComponentStore<T> store, uint index) where T : struct, IComponent
             => store.mapping.dense.AtRO(index);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Ensure<T>(this ComponentStore<T> store, int capacity) where T : struct, IComponent
+        {
+            store.disabled.Ensure(capacity);
+            store.mapping.Ensure(capacity);
+            store.components.Ensure((uint)capacity);
+        }
     }
 }

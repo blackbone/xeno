@@ -50,5 +50,9 @@ namespace Xeno
             versions[index] |= EmptyMask;
             freeSlots.Add(index);
         }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Ensure(in int capacity) => versions.Ensure(capacity);
     }
 }

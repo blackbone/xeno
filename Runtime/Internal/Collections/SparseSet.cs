@@ -65,5 +65,12 @@ namespace Xeno.Collections
         {
             set.n = 0;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Ensure(this ref SparseSet set, in int capacity)
+        {
+            set.dense.Ensure(capacity);
+            set.sparse.Ensure(capacity);
+        }
     }
 }
