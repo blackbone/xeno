@@ -144,7 +144,7 @@ namespace Xeno
             var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
 
-            var count = 4;
+            var count = 16;
             var n = 0u;
             Span<Entity> current = stackalloc Entity[count];
             bool notEnd;
@@ -174,7 +174,7 @@ namespace Xeno
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
             var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
 
-            var count = 4;
+            var count = 16;
             var n = 0u;
             Span<Entity> current = stackalloc Entity[count];
             bool notEnd;
@@ -207,7 +207,7 @@ namespace Xeno
             var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
             var cs4 = componentStores.AtRO(Component<T4>.Index).As<T4>();
 
-            var count = 4;
+            var count = 16;
             var n = 0u;
             Span<Entity> current = stackalloc Entity[count];
             bool notEnd;

@@ -46,7 +46,7 @@ namespace Xeno.Collections
         public static bool Contains(this ref SparseSet set, in uint value, ref uint index)
         {
             ref var sparse = ref set.sparse;
-            index = ref sparse.At(value);
+            index = sparse.At(value);
             ref var dense = ref set.dense;
             return index < set.n && dense.At(index) == value;
         }
