@@ -5,7 +5,7 @@ namespace Xeno.Collections
     public unsafe struct FixedBitSet
     {
         internal const int MASK_SIZE = 512;
-        internal const int MASK_ULONG_SIZE = MASK_SIZE / sizeof(ulong);
+        internal const int MASK_ULONG_SIZE = MASK_SIZE / (sizeof(ulong) * 8);
         internal fixed ulong data[MASK_ULONG_SIZE]; // 512 flags must be enough
     }
 
