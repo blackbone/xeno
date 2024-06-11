@@ -34,11 +34,16 @@ namespace Xeno
         public bool With(in FixedBitSet componentMask, ref uint from, ref Span<Entity> entities, ref int count)
         {
             var j = 0;
-            for (;from < archetypes.Count && j < entities.Length; from++)
+            while (from < archetypes.Count && j < entities.Length)
+            {
                 if (archetypes[from].Includes(componentMask))
-                    entities[j++] = new Entity(from, versions[from] & VersionMask, world.Id);
+                    entities[j] = new Entity(from, versions[from] & VersionMask, world.Id);
+                j++;
+                from++;
+            }
+            
             count = j;
-            return from == entities.Length;
+            return from == archetypes.Count;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

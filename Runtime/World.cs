@@ -124,12 +124,7 @@ namespace Xeno
             var cs1 = componentStores.AtRO(Component<T>.Index).As<T>();
             var count = cs1.Count();
             for (uint i = 0; i < count; i++)
-            {
-                // var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
-
                 update(0f, ref cs1.RefAt(i));
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -143,20 +138,20 @@ namespace Xeno
 
             var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
-
+            
             var count = 16;
             var n = 0u;
             Span<Entity> current = stackalloc Entity[count];
-            bool notEnd;
+            bool end;
             do
             {
-                notEnd = entities.With(mask, ref n, ref current, ref count);
+                end = entities.With(mask, ref n, ref current, ref count);
                 for (var i = 0; i < count; i++)
                 {
                     var eid = current[i].Id;
-                    update(ref cs1.Ref(eid), ref cs2.Ref(eid));
+                    update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid));
                 }
-            } while (notEnd);
+            } while (!end);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -177,16 +172,16 @@ namespace Xeno
             var count = 16;
             var n = 0u;
             Span<Entity> current = stackalloc Entity[count];
-            bool notEnd;
+            bool end;
             do
             {
-                notEnd = entities.With(mask, ref n, ref current, ref count);
+                end = entities.With(mask, ref n, ref current, ref count);
                 for (var i = 0; i < count; i++)
                 {
                     var eid = current[i].Id;
-                    update(ref cs1.Ref(eid), ref cs2.Ref(eid), ref cs3.Ref(eid));
+                    update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid));
                 }
-            } while (notEnd);
+            } while (!end);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,16 +205,16 @@ namespace Xeno
             var count = 16;
             var n = 0u;
             Span<Entity> current = stackalloc Entity[count];
-            bool notEnd;
+            bool end;
             do
             {
-                notEnd = entities.With(mask, ref n, ref current, ref count);
+                end = entities.With(mask, ref n, ref current, ref count);
                 for (var i = 0; i < count; i++)
                 {
                     var eid = current[i].Id;
-                    update(ref cs1.Ref(eid), ref cs2.Ref(eid), ref cs3.Ref(eid), ref cs4.Ref(eid));
+                    update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid), ref cs4.RefUnsafe(eid));
                 }
-            } while (notEnd);
+            } while (!end);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
