@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Xeno;
+using Xeno.SourceGenerator.Sample;
 using IComponent = Xeno.IComponent;
 
 namespace SourceGenerator.Sample;
@@ -43,10 +44,10 @@ public class Program
 {
     public static void Main(string[] args)
     {
-            Console.WriteLine(typeof(Filter.IncludeDisabledAttribute).FullName);
-            Console.WriteLine(typeof(Filter.ChangedOnlyAttribute).FullName);
-            // Console.WriteLine(Marshal.SizeOf<Chunk>());
-            Console.WriteLine(Marshal.SizeOf<int>());
+            // Console.WriteLine(typeof(Filter.IncludeDisabledAttribute).FullName);
+            // Console.WriteLine(typeof(Filter.ChangedOnlyAttribute).FullName);
+            // // Console.WriteLine(Marshal.SizeOf<Chunk>());
+            // Console.WriteLine(Marshal.SizeOf<int>());
 
             // var chunk = new Chunk(Component<Position>.Info);
 
@@ -57,21 +58,21 @@ public class Program
             // Test<float>();
             // Test<Position>();
 
-            // new WorldTests().Run();
-            // new PerfTest().Run();
+            new WorldTests().Run();
+            new PerfTest().Run();
 
             // new Benchmark1(100_000, 20).Run(1_000).Dispose();
             // new Benchmark2(100_000, 20).Run(1_000).Dispose();
             // new Benchmark3(100_000, 20).Run(1_000).Dispose();
     }
 
-    // private static void Test<T>() where T : unmanaged
-    // {
-    //     const int iterations = 16;
-    //     var sum = TimeSpan.Zero;
-    //     for (var i = 0; i < iterations; i++)
-    //         sum += new GrowOnlyListTest<T>().Run();
-    //     sum /= iterations;
-    //     Console.WriteLine($"avg is {sum}");
-    // }
+    private static void Test<T>() where T : unmanaged
+    {
+        const int iterations = 16;
+        var sum = TimeSpan.Zero;
+        for (var i = 0; i < iterations; i++)
+            sum += new GrowOnlyListTest<T>().Run();
+        sum /= iterations;
+        Console.WriteLine($"avg is {sum}");
+    }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace Xeno.SourceGenerator
@@ -80,6 +81,68 @@ namespace {ns}
             
             var sb = new StringBuilder();
             systemMethods.Sort((a, b) => a.order - b.order);
+            
+            foreach (var (method, _, includeDisabled, changedOnly) in systemMethods)
+            {
+                var parameters = method.Parameters;
+                // void ()
+                if (parameters.Length == 0)
+                {
+                    sb.AppendLine($"{method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}();");
+                    continue;
+                }
+
+                // void (ref C1, ref C2, ref C3...)
+                if (parameters.All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
+                {
+                    sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+                    continue;
+                }
+                
+                // void (in Entity, ref C1, ref C2, ref C3...)
+                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default) && method.Parameters[0].RefKind == RefKind.In
+                         && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
+                {
+                    sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+                    continue;
+                }
+                
+                // void (in Uniform, ref C1, ref C2, ref C3...)
+                if (method.Parameters[0].Type.IsValueType && method.Parameters[0].RefKind == RefKind.In
+                    && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
+                {
+                    if (method.Parameters[0].Type.Equals(deltaType, SymbolEqualityComparer.Default))
+                    {
+                        sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
+                        continue;
+                    }
+                    else
+                    {
+                        // TODO: Handle other uniforms
+                    }
+                }
+                
+                // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
+                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
+                    && method.Parameters[0].RefKind == RefKind.In
+                    && method.Parameters[1].Type.IsValueType && method.Parameters[1].RefKind == RefKind.In
+                    && method.Parameters.Skip(2).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
+                {
+                    if (method.Parameters[1].Type.Equals(deltaType, SymbolEqualityComparer.Default))
+                    {
+                        sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
+                        continue;
+                    }
+                    else
+                    {
+                        // TODO: Handle other uniforms
+                    }
+                }
+                
+                // INVALID SIGNATURE!
+            }
+            
+            
             for (var i = 0; i < systemMethods.Count; i++)
             {
                 var method = systemMethods[i].method;
@@ -91,7 +154,6 @@ namespace {ns}
                 }
                 else
                 {
-                    sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
                 }
                     
                 sb.AppendLine();

@@ -20,7 +20,7 @@ public class GrowOnlyListTest<T> where T : unmanaged
         // access
         for (var i = 0; i < iterations; i++)
         {
-            var v = list[(uint)i];
+            ref var v = ref list[(uint)i];
         }
 
         // pop

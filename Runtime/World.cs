@@ -116,15 +116,50 @@ namespace Xeno
                 update(ref cs1.RefAt(i));
             }
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Entities<T>(DeltaComponentDelegate<T> update)
+        public void Entities<T>(EntityComponentDelegate<T> update)
             where T : struct, IComponent
         {
             var cs1 = componentStores.AtRO(Component<T>.Index).As<T>();
             var count = cs1.Count();
             for (uint i = 0; i < count; i++)
-                update(0f, ref cs1.RefAt(i));
+            {
+                var entityId = cs1.GetEntity(i);
+                // if (disabled.Get(entityId)) continue;
+
+                update(entities.At(entityId), ref cs1.RefAt(i));
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Entities<TU, T>(UniformComponentDelegate<TU, T> update, in TU uniform)
+            where T : struct, IComponent
+        {
+            var cs1 = componentStores.AtRO(Component<T>.Index).As<T>();
+            var count = cs1.Count();
+            for (uint i = 0; i < count; i++)
+            {
+                // var entityId = cs1.GetEntity(i);
+                // if (disabled.Get(entityId)) continue;
+
+                update(uniform, ref cs1.RefAt(i));
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Entities<TU, T>(EntityUniformComponentDelegate<TU, T> update, in TU uniform)
+            where T : struct, IComponent
+        {
+            var cs1 = componentStores.AtRO(Component<T>.Index).As<T>();
+            var count = cs1.Count();
+            for (uint i = 0; i < count; i++)
+            {
+                var entityId = cs1.GetEntity(i);
+                // if (disabled.Get(entityId)) continue;
+
+                update(entities.At(entityId), uniform, ref cs1.RefAt(i));
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

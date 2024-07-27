@@ -8,7 +8,7 @@
         <AssemblyName>Xeno</AssemblyName>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.0.1</PackageVersion>
+        <PackageVersion>0.1.1</PackageVersion>
         <Title>General purpose ECS</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides bare bones ECS to get basic stuff.</Description>
@@ -17,6 +17,13 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageTags>ecs dotnet unity</PackageTags>
         <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+        <PackageProjectUrl>https://github.com/blackbone/xeno</PackageProjectUrl>
+        <PackageIcon>xeno.png</PackageIcon>
+        <RepositoryUrl>https://github.com/blackbone/xeno</RepositoryUrl>
+        <RepositoryType>github</RepositoryType>
+        <PackageReleaseNotes>Added:
+&gt; support for delta uniform in systems
+        </PackageReleaseNotes>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -46,6 +53,8 @@
         <None Remove="Editor\**"/>
         <None Remove="obj~\**"/>
         <None Remove="**\*.meta"/>
+        <None Include="xeno.png" Pack="true" PackagePath="">
+        </None>
     </ItemGroup>
 
     <ItemGroup>

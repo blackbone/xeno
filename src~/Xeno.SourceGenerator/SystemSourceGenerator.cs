@@ -12,6 +12,7 @@ namespace Xeno.SourceGenerator
     {
         private INamedTypeSymbol componentInterfaceType;
         private INamedTypeSymbol entityType;
+        private INamedTypeSymbol deltaType;
         private INamedTypeSymbol systemAttributeType;
         private INamedTypeSymbol systemMethodAttributeType;
         private INamedTypeSymbol includeDisabledAttributeType;
@@ -33,6 +34,7 @@ namespace Xeno.SourceGenerator
             var compilation = context.Compilation;
 
             // Find the type symbol for Xeno.UpdateSystem
+            if (!Ensure.Type(compilation, "System.Single", out deltaType)) return;
             if (!Ensure.Type(compilation, "Xeno.Entity", out entityType)) return;
             if (!Ensure.Type(compilation, "Xeno.IComponent", out componentInterfaceType)) return;
             if (!Ensure.Type(compilation, "Xeno.SystemAttribute", out systemAttributeType)) return;

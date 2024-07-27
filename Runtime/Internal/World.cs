@@ -38,7 +38,7 @@ namespace Xeno
             ref var slot = ref componentStores.At(Component<T>.Index);
             if (slot != null) return slot.As<T>();
 
-            var store = new ComponentStore<T>(1024);
+            var store = new ComponentStore<T>();
             componentStores.At(Component<T>.Index) = store;
             return store;
         }
