@@ -11,7 +11,7 @@ namespace Xeno
 
         private GrowOnlyListUInt freeSlots;
         private GrowOnlyListUInt versions; // first bit of version
-        internal GrowOnlyList<FixedBitSet> archetypes;
+        internal GrowOnlyListFixedBitSet archetypes;
         
         internal uint Count;
 
@@ -23,7 +23,7 @@ namespace Xeno
             this.world = world;
             freeSlots = new GrowOnlyListUInt(1024);
             versions = new GrowOnlyListUInt(1024);
-            archetypes = new GrowOnlyList<FixedBitSet>(1024);
+            archetypes = new GrowOnlyListFixedBitSet(1024);
             Count = 0;
         }
 

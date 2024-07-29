@@ -346,8 +346,9 @@ namespace Xeno
         public void RemoveSystemGroup(in SystemGroup system) => systemGroups.Remove(system);
         
         public override string ToString() => $"{Name} ({Id})";
-        
-        public ulong Ticks { get; private set; }
+
+        private ulong _ticks;
+        public ulong Ticks => _ticks;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Tick(float f)
@@ -355,7 +356,7 @@ namespace Xeno
             PreUpdate?.Invoke(f);
             Update?.Invoke(f);
             PostUpdate?.Invoke(f);
-            Ticks++;
+            _ticks++;
         }
 
         public void Start()
@@ -372,7 +373,7 @@ namespace Xeno
                 } while (current != null);
             }
 
-            Ticks = 0ul;
+            _ticks = 0ul;
             Started?.Invoke();
         }
 

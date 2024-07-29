@@ -14,7 +14,7 @@ namespace Xeno
         public static Type Type { get; } = typeof(T);
 
         // ReSharper disable once StaticMemberInGenericType
-        public new static uint Index { get; } = Component.Index++;
+        public new static readonly uint Index = Component.Index++;
         public static int Id => Type.MetadataToken;
         public static ref T Default => ref _defaultValue;
         private Component() { }
