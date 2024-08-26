@@ -5,7 +5,7 @@ namespace Xeno.Collections
 {
     public struct AutoGrowOnlyList<T>
     {
-        internal const uint DefaultStep = 4;
+        private const uint DefaultStep = 4;
         internal readonly uint step;
         internal T[][] data;
 
@@ -18,7 +18,7 @@ namespace Xeno.Collections
     
     public struct AutoGrowOnlyListUInt
     {
-        internal const uint DefaultStep = 256;
+        private const uint DefaultStep = 256;
         internal readonly uint step;
         internal uint[][] data;
 
@@ -35,7 +35,7 @@ namespace Xeno.Collections
         internal readonly uint step;
         internal ulong[][] data;
 
-        public AutoGrowOnlyListULong(uint step = DefaultStep, uint capacity = 0)
+        public AutoGrowOnlyListULong(uint step = DefaultStep, in uint capacity = 0)
         {
             this.step = step;
             data = capacity == 0 ? Array.Empty<ulong[]>() : new ulong[capacity][];
@@ -44,8 +44,10 @@ namespace Xeno.Collections
 
     public static class AutoGrowOnlyListExtensions
     {
+        #region UInt
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref uint At(this ref AutoGrowOnlyListUInt list, uint index)
+        public static ref uint At(this ref AutoGrowOnlyListUInt list, in uint index)
         {
             var dataIndex = index / list.step;
             if (dataIndex >= list.data.Length)
@@ -62,7 +64,7 @@ namespace Xeno.Collections
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint AtRO(this ref AutoGrowOnlyListUInt list, uint index)
+        public static uint AtRO(this ref AutoGrowOnlyListUInt list, in uint index)
         {
             var dataIndex = index / list.step;
             if (dataIndex >= list.data.Length) return 0U;
@@ -83,8 +85,12 @@ namespace Xeno.Collections
             }
         }
         
+        #endregion
+
+        #region ULong
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref ulong At(this ref AutoGrowOnlyListULong list, uint index)
+        public static ref ulong At(this ref AutoGrowOnlyListULong list, in uint index)
         {
             var dataIndex = index / list.step;
             if (dataIndex >= list.data.Length)
@@ -101,7 +107,7 @@ namespace Xeno.Collections
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong AtRO(this ref AutoGrowOnlyListULong list, uint index)
+        public static ulong AtRO(this ref AutoGrowOnlyListULong list, in uint index)
         {
             var dataIndex = index / list.step;
             if (dataIndex >= list.data.Length) return 0UL;
@@ -109,7 +115,7 @@ namespace Xeno.Collections
 
             return list.data[dataIndex][index % list.step];
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Ensure(this ref AutoGrowOnlyListULong list, in int capacity)
         {
@@ -121,9 +127,12 @@ namespace Xeno.Collections
                 while (i < n) list.data[i++] ??= new ulong[list.step];
             }
         }
-        
+        #endregion
+
+        #region Generic
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T At<T>(this ref AutoGrowOnlyList<T> list, uint index)
+        public static ref T At<T>(this ref AutoGrowOnlyList<T> list, in uint index)
         {
             var dataIndex = index / list.step;
             if (dataIndex >= list.data.Length)
@@ -140,7 +149,7 @@ namespace Xeno.Collections
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T AtRO<T>(this ref AutoGrowOnlyList<T> list, uint index)
+        public static T AtRO<T>(this ref AutoGrowOnlyList<T> list, in uint index)
         {
             var dataIndex = index / list.step;
             if (dataIndex >= list.data.Length) return default;
@@ -160,5 +169,7 @@ namespace Xeno.Collections
                 while (i < n) list.data[i++] ??= new T[list.step];
             }
         }
+        
+        #endregion
     }
 }

@@ -125,10 +125,8 @@ namespace Xeno
             var count = cs1.Count();
             for (uint i = 0; i < count; i++)
             {
-                var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
-
-                update(entities.At(entityId), ref cs1.RefAt(i));
+                var eid = cs1.GetEntity(i);
+                update(entities.At(eid), ref cs1.RefAt(i));
             }
         }
         
@@ -140,9 +138,6 @@ namespace Xeno
             var count = cs1.Count();
             for (uint i = 0; i < count; i++)
             {
-                // var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
-
                 update(uniform, ref cs1.RefAt(i));
             }
         }
@@ -188,6 +183,33 @@ namespace Xeno
                 }
             } while (!end);
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Entities<T1, T2>(EntityComponentDelegate<T1, T2> update)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+        {
+            var mask = new FixedBitSet();
+            mask.Set(Component<T1>.Index);
+            mask.Set(Component<T2>.Index);
+
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
+            
+            var count = 16;
+            var n = 0u;
+            Span<Entity> current = stackalloc Entity[count];
+            bool end;
+            do
+            {
+                end = entities.With(mask, ref n, ref current, ref count);
+                for (var i = 0; i < count; i++)
+                {
+                    var eid = current[i].Id;
+                    update(entities.At(eid), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid));
+                }
+            } while (!end);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Entities<T1, T2, T3>(ComponentDelegate<T1, T2, T3> update)
@@ -215,6 +237,36 @@ namespace Xeno
                 {
                     var eid = current[i].Id;
                     update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid));
+                }
+            } while (!end);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Entities<T1, T2, T3>(EntityComponentDelegate<T1, T2, T3> update)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+        {
+            var mask = new FixedBitSet();
+            mask.Set(Component<T1>.Index);
+            mask.Set(Component<T2>.Index);
+            mask.Set(Component<T3>.Index);
+
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
+            var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
+
+            var count = 16;
+            var n = 0u;
+            Span<Entity> current = stackalloc Entity[count];
+            bool end;
+            do
+            {
+                end = entities.With(mask, ref n, ref current, ref count);
+                for (var i = 0; i < count; i++)
+                {
+                    var eid = current[i].Id;
+                    update(entities.At(eid), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid));
                 }
             } while (!end);
         }
@@ -248,6 +300,39 @@ namespace Xeno
                 {
                     var eid = current[i].Id;
                     update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid), ref cs4.RefUnsafe(eid));
+                }
+            } while (!end);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Entities<T1, T2, T3, T4>(EntityComponentDelegate<T1, T2, T3, T4> update)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
+        {
+            var mask = new FixedBitSet();
+            mask.Set(Component<T1>.Index);
+            mask.Set(Component<T2>.Index);
+            mask.Set(Component<T3>.Index);
+            mask.Set(Component<T4>.Index);
+
+            var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
+            var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
+            var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
+            var cs4 = componentStores.AtRO(Component<T4>.Index).As<T4>();
+
+            var count = 16;
+            var n = 0u;
+            Span<Entity> current = stackalloc Entity[count];
+            bool end;
+            do
+            {
+                end = entities.With(mask, ref n, ref current, ref count);
+                for (var i = 0; i < count; i++)
+                {
+                    var eid = current[i].Id;
+                    update(entities.At(eid), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid), ref cs4.RefUnsafe(eid));
                 }
             } while (!end);
         }

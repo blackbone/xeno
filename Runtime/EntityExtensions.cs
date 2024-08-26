@@ -24,9 +24,8 @@ namespace Xeno
         {
             var world = Worlds.ExistingWorlds[entity.WorldId];
             world.Components<T1>().Add(entity.Id, component1);
-            world.AddToArchetype<T1>(entity.Id);
             world.Components<T2>().Add(entity.Id, component2);
-            world.AddToArchetype<T2>(entity.Id);
+            world.AddToArchetype<T1, T2>(entity.Id);
         }
 
         public static void AddComponents<T1, T2, T3>(this Entity entity, in T1 component1, in T2 component2, in T3 component3)
@@ -36,11 +35,9 @@ namespace Xeno
         {
             var world = Worlds.ExistingWorlds[entity.WorldId];
             world.Components<T1>().Add(entity.Id, component1);
-            world.AddToArchetype<T1>(entity.Id);
             world.Components<T2>().Add(entity.Id, component2);
-            world.AddToArchetype<T2>(entity.Id);
             world.Components<T3>().Add(entity.Id, component3);
-            world.AddToArchetype<T3>(entity.Id);
+            world.AddToArchetype<T1, T2, T3>(entity.Id);
         }
 
         public static void AddComponents<T1, T2, T3, T4>(this Entity entity, in T1 component1, in T2 component2,
@@ -52,13 +49,10 @@ namespace Xeno
         {
             var world = Worlds.ExistingWorlds[entity.WorldId];
             world.Components<T1>().Add(entity.Id, component1);
-            world.AddToArchetype<T1>(entity.Id);
             world.Components<T2>().Add(entity.Id, component2);
-            world.AddToArchetype<T2>(entity.Id);
             world.Components<T3>().Add(entity.Id, component3);
-            world.AddToArchetype<T3>(entity.Id);
             world.Components<T4>().Add(entity.Id, component4);
-            world.AddToArchetype<T4>(entity.Id);
+            world.AddToArchetype<T1, T2, T3, T4>(entity.Id);
         }
 
         public static void SetComponent<T>(this Entity entity, in T component) where T : struct, IComponent
@@ -87,9 +81,8 @@ namespace Xeno
         {
             var world = Worlds.ExistingWorlds[entity.WorldId];
             component1 = world.Components<T1>().Remove(entity.Id);
-            world.RemoveFromArchetype<T1>(entity.Id);
             component2 = world.Components<T2>().Remove(entity.Id);
-            world.RemoveFromArchetype<T2>(entity.Id);
+            world.RemoveFromArchetype<T1, T2>(entity.Id);
         }
         
         public static void RemoveComponents<T1, T2, T3>(this Entity entity, out T1 component1, out T2 component2, out T3 component3)
@@ -99,11 +92,9 @@ namespace Xeno
         {
             var world = Worlds.ExistingWorlds[entity.WorldId];
             component1 = world.Components<T1>().Remove(entity.Id);
-            world.RemoveFromArchetype<T1>(entity.Id);
             component2 = world.Components<T2>().Remove(entity.Id);
-            world.RemoveFromArchetype<T2>(entity.Id);
             component3 = world.Components<T3>().Remove(entity.Id);
-            world.RemoveFromArchetype<T3>(entity.Id);
+            world.RemoveFromArchetype<T1, T2, T3>(entity.Id);
         }
         
         public static void RemoveComponents<T1, T2, T3, T4>(this Entity entity, out T1 component1, out T2 component2, out T3 component3, out T4 component4)
@@ -114,13 +105,10 @@ namespace Xeno
         {
             var world = Worlds.ExistingWorlds[entity.WorldId];
             component1 = world.Components<T1>().Remove(entity.Id);
-            world.RemoveFromArchetype<T1>(entity.Id);
             component2 = world.Components<T2>().Remove(entity.Id);
-            world.RemoveFromArchetype<T2>(entity.Id);
             component3 = world.Components<T3>().Remove(entity.Id);
-            world.RemoveFromArchetype<T3>(entity.Id);
             component4 = world.Components<T4>().Remove(entity.Id);
-            world.RemoveFromArchetype<T4>(entity.Id);
+            world.RemoveFromArchetype<T1, T2, T3, T4>(entity.Id);
         }
     }
 }

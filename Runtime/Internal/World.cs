@@ -52,11 +52,88 @@ namespace Xeno
             => disabled.Set(entityId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AddToArchetype<T>(uint entityId) where T : struct, IComponent
-            => entities.archetypes[entityId].Set(Component<T>.Index);
+        internal void AddToArchetype<T1>(uint entityId)
+            where T1 : struct, IComponent
+        {
+            entities.archetypes[entityId].Set(Component<T1>.Index);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void AddToArchetype<T1, T2>(uint entityId)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+        {
+            entities.archetypes[entityId]
+                .Set(Component<T1>.Index)
+                .Set(Component<T2>.Index);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void AddToArchetype<T1, T2, T3>(uint entityId)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+        {
+            entities.archetypes[entityId]
+                .Set(Component<T1>.Index)
+                .Set(Component<T2>.Index)
+                .Set(Component<T3>.Index);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void AddToArchetype<T1, T2, T3, T4>(uint entityId)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
+        {
+            entities.archetypes[entityId]
+                .Set(Component<T1>.Index)
+                .Set(Component<T2>.Index)
+                .Set(Component<T3>.Index)
+                .Set(Component<T4>.Index);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void RemoveFromArchetype<T>(uint entityId) where T : struct, IComponent
-            => entities.archetypes[entityId].Unset(Component<T>.Index);
+        {
+            entities.archetypes[entityId].Unset(Component<T>.Index);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void RemoveFromArchetype<T1, T2>(uint entityId)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+        {
+            entities.archetypes[entityId]
+                .Unset(Component<T1>.Index)
+                .Unset(Component<T2>.Index);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void RemoveFromArchetype<T1, T2, T3>(uint entityId)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+        {
+            entities.archetypes[entityId]
+                .Unset(Component<T1>.Index)
+                .Unset(Component<T2>.Index)
+                .Unset(Component<T3>.Index);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void RemoveFromArchetype<T1, T2, T3, T4>(uint entityId)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
+        {
+            entities.archetypes[entityId]
+                .Unset(Component<T1>.Index)
+                .Unset(Component<T2>.Index)
+                .Unset(Component<T3>.Index)
+                .Unset(Component<T4>.Index);
+        }
     }
 }

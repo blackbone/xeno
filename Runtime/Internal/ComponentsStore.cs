@@ -60,13 +60,11 @@ namespace Xeno
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static ref T RefUnsafe<T>(this ComponentStore<T> store, uint entityId) where T : struct, IComponent
-        {
-            return ref store.components.At(store.mapping.sparse.At(entityId));
-        }
-        
+        internal static ref T RefUnsafe<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
+            => ref store.components.At(store.mapping.sparse.AtRO(entityId));
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T RefAt<T>(this ComponentStore<T> store, uint index) where T : struct, IComponent
+        public static ref T RefAt<T>(this ComponentStore<T> store, in uint index) where T : struct, IComponent
             => ref store.components.At(index);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

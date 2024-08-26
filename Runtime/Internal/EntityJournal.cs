@@ -31,18 +31,16 @@ namespace Xeno
         public Entity At(uint index) => new(index, versions[index] & VersionMask, world.Id);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool With(in FixedBitSet componentMask, ref uint from, ref Span<Entity> entities, ref int count)
-        {
-            var j = 0;
-            while (from < archetypes.Count && j < entities.Length)
+        public bool With(in FixedBitSet componentMask, ref uint from, ref Span<Entity> entities, ref int count) {
+            var i = 0;
+            while (from < archetypes.Count && i < entities.Length)
             {
                 if (archetypes[from].Includes(componentMask))
-                    entities[j] = new Entity(from, versions[from] & VersionMask, world.Id);
-                j++;
+                    entities[i++] = new Entity(from, versions[from] & VersionMask, world.Id);
                 from++;
             }
             
-            count = j;
+            count = i;
             return from == archetypes.Count;
         }
 
