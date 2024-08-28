@@ -6,79 +6,6 @@ using Unsafe = Unity.Collections.LowLevel.Unsafe.UnsafeUtility;
 
 namespace Xeno.Collections
 {
-    public struct GrowOnlyList<T>
-    {
-        private const uint DefaultStep = 4;
-
-        private readonly uint step;
-        private readonly uint capacityGrow;
-
-        private uint count;
-        private uint capacity;
-        private T[][] data;
-
-        public GrowOnlyList(uint step = DefaultStep, uint capacity = 0, uint capacityGrow = 32)
-        {
-            this.step = step;
-
-            count = 0;
-            this.capacity = capacity;
-            this.capacityGrow = capacityGrow;
-            data = this.capacity == 0 ? Array.Empty<T[]>() : new T[capacity][];
-        }
-
-        public uint Count
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => count;
-        }
-
-        public ref T this[uint index]
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                var blockIndex = index / step;
-                var block = data[blockIndex] ??= new T[step];
-                return ref block[index % step];
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(T value)
-        {
-            if (count >= capacity) // resize container array
-            {
-                var idx = (uint)data.Length;
-                Array.Resize(ref data, (int)(idx + capacityGrow));
-                data[idx] = new T[step];
-                capacity = (idx + capacityGrow) * step;
-            }
-
-            this[count] = value;
-            count++;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public T TakeLast()
-        {
-            count--;
-            return this[count];
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Ensure(in int capacity)
-        {
-            if (capacity >= this.capacity) // resize container array
-            {
-                var n = (int)(capacity / step + 1);
-                Array.Resize(ref data, n);
-                var i = 0;
-                while (i < n) data[i++] ??= new T[step];
-            }
-        }
-    }
-    
     public struct GrowOnlyListUInt
     {
         private const uint DefaultStep = 4;
@@ -86,7 +13,7 @@ namespace Xeno.Collections
         private readonly uint step;
         private readonly uint capacityGrow;
 
-        private uint count;
+        internal uint count;
         private uint capacity;
         private uint[][] data;
 
@@ -160,7 +87,7 @@ namespace Xeno.Collections
         private readonly uint step;
         private readonly uint capacityGrow;
 
-        private uint count;
+        internal uint count;
         private uint capacity;
         private FixedBitSet[][] data;
 

@@ -8,8 +8,6 @@ namespace Xeno.Collections
         internal AutoGrowOnlyListUInt dense;
         internal AutoGrowOnlyListUInt sparse;
 
-        public uint Count => n;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public SparseSet(uint density)
         {

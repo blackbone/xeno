@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
+#pragma warning disable RS1024
 namespace Xeno.SourceGenerator
 {
     public partial class SystemSourceGenerator
@@ -104,6 +105,7 @@ namespace {ns}
                          && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
                 {
                     sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+
                     continue;
                 }
                 
@@ -243,3 +245,4 @@ namespace {ns}
     }
 }
 
+#pragma warning restore RS1024

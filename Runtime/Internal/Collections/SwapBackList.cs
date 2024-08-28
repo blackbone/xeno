@@ -5,13 +5,13 @@ namespace Xeno.Collections
 {
     internal struct SwapBackList<T>
     {
-        private const uint DefaultStep = 4;
+        private const uint DefaultStep = 1024;
         internal readonly uint step;
 
         internal bool allocated;
         internal uint count;
         internal uint capacity;
-        internal T[][] data;
+        internal T[] data;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public SwapBackList(uint step = DefaultStep)
@@ -21,7 +21,7 @@ namespace Xeno.Collections
             allocated = true;
             count = 0;
             capacity = 0;
-            data = Array.Empty<T[]>();
+            data = Array.Empty<T>();
         }
     }
     
@@ -31,11 +31,8 @@ namespace Xeno.Collections
         public static uint Count<T>(this ref SwapBackList<T> list) => list.count;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T At<T>(this ref SwapBackList<T> list, uint index)
-        {
-            var blockIndex = index / list.step;
-            list.data[blockIndex] ??= new T[list.step];
-            return ref list.data[blockIndex][index % list.step];
+        public static ref T At<T>(this ref SwapBackList<T> list, uint index) {
+            return ref list.data[index];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -43,10 +40,9 @@ namespace Xeno.Collections
         {
             if (list.count >= list.capacity) // resize container array
             {
-                var idx = list.data.Length;
-                Array.Resize(ref list.data, idx + 32);
-                list.data[idx] = new T[list.step];
-                list.capacity = (uint)((idx + 32) * list.step);
+                var newCapacity = list.count + list.step;
+                Array.Resize(ref list.data, (int)newCapacity);
+                list.capacity = newCapacity;
             }
 
             list.At(list.count) = value;
@@ -63,23 +59,14 @@ namespace Xeno.Collections
             if (index < list.count)
                 list.At(index) = list.At(list.count);
 
-            // check last array empty
-            if (list.count % list.step == 0)
-                list.data[list.count / list.step] = null; // GC will handle this i hope
-
             return value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Ensure<T>(this ref SwapBackList<T> list, in uint capacity) where T : struct
         {
-            var count = capacity / list.step + 1;
-            if (count >= list.data.Length)
-            {
-                var size = list.data.Length;
-                Array.Resize(ref list.data, (int)count);
-                while (size < count) list.data[size++] = new T[list.step];
-            }
+            var count = (capacity / list.step + 1) * list.step;
+            if (count >= list.data.Length) Array.Resize(ref list.data, (int)count);
         }
     }
 }

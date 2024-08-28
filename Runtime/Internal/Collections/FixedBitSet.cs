@@ -1,19 +1,81 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+#if NET5_0_OR_GREATER
+using System.Runtime.Intrinsics;
+#endif
 
 namespace Xeno.Collections
 {
+    [StructLayout(LayoutKind.Explicit)]
     public unsafe struct FixedBitSet : IEquatable<FixedBitSet>
     {
-        internal const int MASK_SIZE = 512;
-        internal const int MASK_ULONG_SIZE = MASK_SIZE / (sizeof(ulong) * 8);
-        internal fixed ulong data[MASK_ULONG_SIZE]; // 512 flags must be enough
+        internal const int MASK_BIT_SIZE = 512;
+        internal const int MASK_ULONG_SIZE = MASK_BIT_SIZE / (sizeof(ulong) * 8);
         
-        public override int GetHashCode() =>
-            HashCode.Combine(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+        [FieldOffset(0)] internal fixed ulong data[MASK_ULONG_SIZE]; // 512 flags must be enough
+#if VECTORIZATION
+#if NET8_0_OR_GREATER
+        [FieldOffset(0)] internal Vector512<ulong> v512;
+#endif
+#if NET5_0_OR_GREATER
+        [FieldOffset(0)] internal Vector256<ulong> v256_1;
+        [FieldOffset(256)] internal Vector256<ulong> v256_2;
+        
+        [FieldOffset(0)] internal Vector128<ulong> v128_1;
+        [FieldOffset(128)] internal Vector128<ulong> v128_2;
+        [FieldOffset(256)] internal Vector128<ulong> v128_3;
+        [FieldOffset(384)] internal Vector128<ulong> v128_4;
+#endif
+#endif
+        
+        public override int GetHashCode()
+        {
+#if VECTORIZATION
+#if NET8_0_OR_GREATER
+            if (Vector512.IsHardwareAccelerated)
+            {
+                return v512.GetHashCode();
+            }
+#endif
+#if NET5_0_OR_GREATER
+            if (Vector256.IsHardwareAccelerated)
+            {
+                return HashCode.Combine(v256_1.GetHashCode(), v256_2.GetHashCode());
+            }
+            
+            if (Vector128.IsHardwareAccelerated)
+            {
+                return HashCode.Combine(v128_1.GetHashCode(), v128_2.GetHashCode(), v128_3.GetHashCode(), v128_4.GetHashCode());
+            }
+#endif
+#endif
+            
+            return HashCode.Combine(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+        }
 
         public bool Equals(FixedBitSet other)
         {
+#if VECTORIZATION
+#if NET8_0_OR_GREATER
+            if (Vector512.IsHardwareAccelerated)
+            {
+                return v512.Equals(other.v512);
+            }
+#endif
+#if NET5_0_OR_GREATER
+            if (Vector256.IsHardwareAccelerated)
+            {
+                return v256_1.Equals(other.v256_1) && v256_2.Equals(other.v256_2);
+            }
+            
+            if (Vector128.IsHardwareAccelerated)
+            {
+                return v128_1.Equals(other.v128_1) && v128_2.Equals(other.v128_2) && v128_3.Equals(other.v128_3) && v128_4.Equals(other.v128_4);
+            }
+#endif
+#endif
+            
             return data[0] == other.data[0]
                    && data[1] == other.data[1]
                    && data[2] == other.data[2]
@@ -35,11 +97,41 @@ namespace Xeno.Collections
         private const uint DIVISION_MASK = 0b00000000_00000000_00000000_00111111;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe bool Get(this ref FixedBitSet origin, uint index) => (origin.data[index >> 6] & 1ul << (int)(index & DIVISION_MASK)) != 0;
-        
+        internal static unsafe bool Get(this ref FixedBitSet origin, uint index)
+        {
+            return (origin.data[index >> 6] & 1ul << (int)(index & DIVISION_MASK)) != 0;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe ref FixedBitSet Set(this ref FixedBitSet origin, uint index)
         {
+#if VECTORIZATION
+#if NET8_0_OR_GREATER
+            if (Vector512.IsHardwareAccelerated)
+            {
+                origin.v512 = Vector512<ulong>.Zero;
+                return ref origin;
+            }
+#endif
+#if NET5_0_OR_GREATER
+            if (Vector256.IsHardwareAccelerated)
+            {
+                origin.v256_1 = Vector256<ulong>.Zero;
+                origin.v256_2 = Vector256<ulong>.Zero;
+                return ref origin;
+            }
+
+            if (Vector128.IsHardwareAccelerated)
+            {
+                origin.v128_1 = Vector128<ulong>.Zero;
+                origin.v128_2 = Vector128<ulong>.Zero;
+                origin.v128_3 = Vector128<ulong>.Zero;
+                origin.v128_4 = Vector128<ulong>.Zero;
+                return ref origin;
+            }
+#endif
+#endif
+
             origin.data[index >> 6] |= 1ul << (int)(index & DIVISION_MASK);
             return ref origin;
         }
@@ -54,6 +146,32 @@ namespace Xeno.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe ref FixedBitSet Reset(this ref FixedBitSet origin)
         {
+#if VECTORIZATION
+#if NET8_0_OR_GREATER
+            if (Vector512.IsHardwareAccelerated)
+            {
+                origin.v512 = Vector512<ulong>.Zero;
+                return ref origin;
+            }
+#endif
+#if NET5_0_OR_GREATER
+            if (Vector256.IsHardwareAccelerated)
+            {
+                origin.v256_1 = Vector256<ulong>.Zero;
+                origin.v256_2 = Vector256<ulong>.Zero;
+                return ref origin;
+            }
+            
+            if (Vector128.IsHardwareAccelerated)
+            {
+                origin.v128_1 = Vector128<ulong>.Zero;
+                origin.v128_2 = Vector128<ulong>.Zero;
+                origin.v128_3 = Vector128<ulong>.Zero;
+                origin.v128_4 = Vector128<ulong>.Zero;
+                return ref origin;
+            }
+#endif
+#endif
             for (var i = 0; i < FixedBitSet.MASK_ULONG_SIZE; i++)
                 origin.data[i] = 0;
             return ref origin;
@@ -62,14 +180,40 @@ namespace Xeno.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe bool Includes(this ref FixedBitSet origin, in FixedBitSet other)
         {
-            if ((origin.data[0] & other.data[0]) != other.data[0]) return false;
-            if ((origin.data[1] & other.data[1]) != other.data[1]) return false;
-            if ((origin.data[2] & other.data[2]) != other.data[2]) return false;
-            if ((origin.data[3] & other.data[3]) != other.data[3]) return false;
-            if ((origin.data[4] & other.data[4]) != other.data[4]) return false;
-            if ((origin.data[5] & other.data[5]) != other.data[5]) return false;
-            if ((origin.data[6] & other.data[6]) != other.data[6]) return false;
-            if ((origin.data[7] & other.data[7]) != other.data[7]) return false;
+#if VECTORIZATION
+#if NET8_0_OR_GREATER
+            if (Vector512.IsHardwareAccelerated)
+            {
+                return (origin.v512 & other.v512) == other.v512;
+            }
+#endif
+#if NET5_0_OR_GREATER
+            if (Vector256.IsHardwareAccelerated)
+            {
+                var mask1 = origin.v256_1 & other.v256_1;
+                var mask2 = origin.v256_2 & other.v256_2;
+                return mask1.Equals(other.v256_1) && mask2.Equals(other.v256_2);
+            }
+
+            if (Vector128.IsHardwareAccelerated)
+            {
+                var mask1 = origin.v128_1 & other.v128_1;
+                var mask2 = origin.v128_2 & other.v128_2;
+                var mask3 = origin.v128_3 & other.v128_3;
+                var mask4 = origin.v128_4 & other.v128_4;
+                return mask1.Equals(other.v128_1) && mask2.Equals(other.v128_2) &&
+                    mask3.Equals(other.v128_3) && mask4.Equals(other.v128_4);
+            }
+#endif
+#endif
+
+            // Non-vectorized path: loop and early return on mismatch
+            for (int i = 0; i < FixedBitSet.MASK_ULONG_SIZE; i++)
+            {
+                if ((origin.data[i] & other.data[i]) != other.data[i])
+                    return false;
+            }
+
             return true;
         }
     }

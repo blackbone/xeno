@@ -2,7 +2,14 @@ using System.Runtime.InteropServices;
 
 namespace Xeno
 {
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct RWEntity {
+        internal byte WorldId;
+        public uint Id;
+        public uint Version;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public readonly struct Entity
     {
         private static Entity defaultEntity = new(uint.MaxValue, 0, 0);

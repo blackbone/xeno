@@ -20,12 +20,12 @@ namespace Xeno.Collections
     {
         private const uint DefaultStep = 256;
         internal readonly uint step;
-        internal uint[][] data;
+        internal uint[] data;
 
         public AutoGrowOnlyListUInt(uint step = DefaultStep, uint capacity = 0)
         {
             this.step = step;
-            data = capacity == 0 ? Array.Empty<uint[]>() : new uint[capacity][];
+            data = capacity == 0 ? Array.Empty<uint>() : new uint[capacity];
         }
     }
     
@@ -49,39 +49,23 @@ namespace Xeno.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref uint At(this ref AutoGrowOnlyListUInt list, in uint index)
         {
-            var dataIndex = index / list.step;
-            if (dataIndex >= list.data.Length)
+            var size = list.data.Length;
+            if (index >= size)
             {
-                var size = list.data.Length;
-                var newSize = (int)(dataIndex + list.step);
+                var newSize = (int)((index / list.step + 1) * list.step);
                 Array.Resize(ref list.data, newSize);
-                while (size < newSize)
-                    list.data[size++] = new uint[list.step];
             }
-
-            list.data[dataIndex] ??= new uint[list.step];
-            return ref list.data[dataIndex][index % list.step];
+            return ref list.data[index];
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint AtRO(this ref AutoGrowOnlyListUInt list, in uint index)
-        {
-            var dataIndex = index / list.step;
-            if (dataIndex >= list.data.Length) return 0U;
-            if (list.data[dataIndex] == null) return 0U;
 
-            return list.data[dataIndex][index % list.step];
-        }
-        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Ensure(this ref AutoGrowOnlyListUInt list, in int capacity)
         {
-            var n = (int)(capacity / list.step + 1);
-            if (n > list.data.Length) // resize container array
+            var size = list.data.Length;
+            if (capacity >= size)
             {
-                Array.Resize(ref list.data, n);
-                var i = 0;
-                while (i < n) list.data[i++] ??= new uint[list.step];
+                var newSize = (int)((capacity / list.step + 1) * list.step);
+                Array.Resize(ref list.data, newSize);
             }
         }
         
@@ -107,13 +91,10 @@ namespace Xeno.Collections
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong AtRO(this ref AutoGrowOnlyListULong list, in uint index)
+        public static ref readonly ulong AtRO(this ref AutoGrowOnlyListULong list, in uint index)
         {
             var dataIndex = index / list.step;
-            if (dataIndex >= list.data.Length) return 0UL;
-            if (list.data[dataIndex] == null) return 0UL;
-
-            return list.data[dataIndex][index % list.step];
+            return ref list.data[dataIndex][index % list.step];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -17,7 +17,7 @@ namespace Xeno.Collections
         public void Unset(uint index) => data.At(index / 64) |= 1ul << (int)(index % 64);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Get(uint index) => (data.AtRO(index / 64) & 1ul << (int)(index % 64)) != 0;
+        public bool Get(uint index) => (data.At(index / 64) & 1ul << (int)(index % 64)) != 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RemoveAndSwapBack(uint index, uint lastIndex)

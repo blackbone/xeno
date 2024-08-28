@@ -9,6 +9,7 @@ namespace Xeno
         private const uint VersionMask = 0b01111111_11111111_11111111_11111111U;
         private const uint EmptyMask = 0b10000000_00000000_00000000_00000000U;
 
+        // use arrays?
         private GrowOnlyListUInt freeSlots;
         private GrowOnlyListUInt versions; // first bit of version
         internal GrowOnlyListFixedBitSet archetypes;
@@ -18,12 +19,12 @@ namespace Xeno
         private readonly World world;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public EntityJournal(World world)
+        public EntityJournal(World world, in uint grow = 16384)
         {
             this.world = world;
-            freeSlots = new GrowOnlyListUInt(1024);
-            versions = new GrowOnlyListUInt(1024);
-            archetypes = new GrowOnlyListFixedBitSet(1024);
+            freeSlots = new GrowOnlyListUInt(grow, grow);
+            versions = new GrowOnlyListUInt(grow, grow);
+            archetypes = new GrowOnlyListFixedBitSet(grow, grow);
             Count = 0;
         }
 
@@ -31,24 +32,29 @@ namespace Xeno
         public Entity At(uint index) => new(index, versions[index] & VersionMask, world.Id);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool With(in FixedBitSet componentMask, ref uint from, ref Span<Entity> entities, ref int count) {
+        public unsafe bool With(in FixedBitSet componentMask, ref uint from, ref Span<Entity> entities, ref int count) {
+            var worldId = world.Id;
             var i = 0;
-            while (from < archetypes.Count && i < entities.Length)
+            var writableEntities = new Span<RWEntity>(Unsafe.AsPointer(ref entities[0]), entities.Length);
+            while (from < archetypes.count && i < entities.Length)
             {
-                if (archetypes[from].Includes(componentMask))
-                    entities[i++] = new Entity(from, versions[from] & VersionMask, world.Id);
+                if (archetypes[from].Includes(componentMask)) {
+                    writableEntities[i].Id = from;
+                    writableEntities[i].Version = from;
+                    writableEntities[i++].WorldId = worldId;
+                }
                 from++;
             }
             
             count = i;
-            return from == archetypes.Count;
+            return from == archetypes.count;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity Create()
         {
             Count++;
-            if (freeSlots.Count > 0)
+            if (freeSlots.count > 0)
             {
                 var index = freeSlots.TakeLast();
                 versions[index] = (versions[index] & VersionMask) + 1;
