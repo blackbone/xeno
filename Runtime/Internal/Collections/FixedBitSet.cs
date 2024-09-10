@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 #if NET5_0_OR_GREATER
@@ -10,6 +11,8 @@ namespace Xeno.Collections
     [StructLayout(LayoutKind.Explicit)]
     public unsafe struct FixedBitSet : IEquatable<FixedBitSet>
     {
+        public static readonly FixedBitSet Zero = new();
+        
         internal const int MASK_BIT_SIZE = 512;
         internal const int MASK_ULONG_SIZE = MASK_BIT_SIZE / (sizeof(ulong) * 8);
         
@@ -92,54 +95,62 @@ namespace Xeno.Collections
         public static bool operator !=(FixedBitSet a, FixedBitSet b) => !a.Equals(b);
     }
 
-    internal static class FixedBitSetExtensions
+    public sealed class FixedBitSetComparer : IEqualityComparer<FixedBitSet>
     {
-        private const uint DIVISION_MASK = 0b00000000_00000000_00000000_00111111;
+        [ThreadStatic] private static FixedBitSetComparer _shared;
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe bool Get(this ref FixedBitSet origin, uint index)
-        {
-            return (origin.data[index >> 6] & 1ul << (int)(index & DIVISION_MASK)) != 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe ref FixedBitSet Set(this ref FixedBitSet origin, uint index)
+        public static FixedBitSetComparer Shared => _shared ??= new FixedBitSetComparer();
+        
+        public unsafe bool Equals(FixedBitSet x, FixedBitSet y)
         {
 #if VECTORIZATION
 #if NET8_0_OR_GREATER
             if (Vector512.IsHardwareAccelerated)
-            {
-                origin.v512 = Vector512<ulong>.Zero;
-                return ref origin;
-            }
+                return x.v512.Equals(y.v512);
 #endif
 #if NET5_0_OR_GREATER
             if (Vector256.IsHardwareAccelerated)
-            {
-                origin.v256_1 = Vector256<ulong>.Zero;
-                origin.v256_2 = Vector256<ulong>.Zero;
-                return ref origin;
-            }
+                return x.v256_1.Equals(y.v256_1) && x.v256_2.Equals(y.v256_2);
 
             if (Vector128.IsHardwareAccelerated)
-            {
-                origin.v128_1 = Vector128<ulong>.Zero;
-                origin.v128_2 = Vector128<ulong>.Zero;
-                origin.v128_3 = Vector128<ulong>.Zero;
-                origin.v128_4 = Vector128<ulong>.Zero;
-                return ref origin;
-            }
+                return x.v128_1.Equals(y.v128_1)
+                       && x.v128_2.Equals(y.v128_2)
+                       && x.v128_3.Equals(y.v128_3)
+                       && x.v128_4.Equals(y.v128_4);
 #endif
 #endif
 
+            return new Span<ulong>(x.data, FixedBitSet.MASK_ULONG_SIZE)
+                .SequenceEqual(new Span<ulong>(y.data, FixedBitSet.MASK_ULONG_SIZE));
+
+        }
+
+        public int GetHashCode(FixedBitSet obj)
+            => obj.GetHashCodeRef();
+    }
+
+    internal static class FixedBitSetExtensions
+    {
+        private const uint DIVISION_MASK = 0b00000000_00000000_00000000_00111111;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int GetHashCodeRef(this ref FixedBitSet origin) => origin.GetHashCode();
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe bool Get(this ref FixedBitSet origin, in int index)
+            => (origin.data[index >> 6] & 1ul << (int)(index & DIVISION_MASK)) != 0;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe ref FixedBitSet Set(this ref FixedBitSet origin, in int index)
+        {
             origin.data[index >> 6] |= 1ul << (int)(index & DIVISION_MASK);
             return ref origin;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe ref FixedBitSet Unset(this ref FixedBitSet origin, uint index)
+        internal static unsafe ref FixedBitSet Unset(this ref FixedBitSet origin, in int index)
         {
-            origin.data[index >> 6] |= 1ul << (int)(index & DIVISION_MASK);
+            origin.data[index >> 6] &= ~(1ul << (int)(index & DIVISION_MASK));
             return ref origin;
         }
 

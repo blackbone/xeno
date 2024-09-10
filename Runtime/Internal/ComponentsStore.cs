@@ -17,13 +17,11 @@ namespace Xeno
     [StructLayout(LayoutKind.Sequential)]
     internal sealed class ComponentStore<T> : ComponentStore where T : struct, IComponent
     {
-        internal BitSet disabled;
         internal SparseSet mapping;
         internal SwapBackList<T> components;
 
-        public ComponentStore(uint density = 1024)
+        public ComponentStore(int density = 1024)
         {
-            disabled = new BitSet(density);
             mapping = new SparseSet(density);
             components = new SwapBackList<T>(density);
         }
@@ -41,17 +39,15 @@ namespace Xeno
     internal static class ComponentStoreExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint Count<T>(this ComponentStore<T> store) where T : struct, IComponent
-            => store.components.Count();
+        public static int Count<T>(this ComponentStore<T> store) where T : struct, IComponent => store.components.count;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Has<T>(this ComponentStore<T> store, uint entityId) where T : struct, IComponent
+        public static bool Has<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
             => store.mapping.Contains(entityId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T Ref<T>(this ComponentStore<T> store, uint entityId) where T : struct, IComponent
+        public static ref T Ref<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
         {
-            // todo point to discussion
             uint index = default;
             if (store.mapping.Contains(entityId, ref index))
                 return ref store.components.At(index);
@@ -98,7 +94,7 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T Remove<T>(this ComponentStore<T> store, uint entityId) where T : struct, IComponent
+        public static T Remove<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
         {
             uint index = default;
             if (store.mapping.Contains(entityId))
@@ -111,7 +107,7 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RemoveInternal<T>(this ComponentStore<T> store, uint entityId) where T : struct, IComponent
+        public static void RemoveInternal<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
         {
             if (store.mapping.Contains(entityId)) return;
             var index = store.mapping.Remove(entityId);
@@ -119,15 +115,14 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint GetEntity<T>(this ComponentStore<T> store, uint index) where T : struct, IComponent
+        public static uint GetEntity<T>(this ComponentStore<T> store, in uint index) where T : struct, IComponent
             => store.mapping.dense.At(index);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Ensure<T>(this ComponentStore<T> store, int capacity) where T : struct, IComponent
+        public static void Ensure<T>(this ComponentStore<T> store, in int capacity) where T : struct, IComponent
         {
-            store.disabled.Ensure(capacity);
             store.mapping.Ensure(capacity);
-            store.components.Ensure((uint)capacity);
+            store.components.Ensure(capacity);
         }
     }
 }

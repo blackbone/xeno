@@ -9,10 +9,10 @@ namespace Xeno.Collections
         internal AutoGrowOnlyListUInt sparse;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public SparseSet(uint density)
+        public SparseSet(in int step = Constants.DefaultStep, in int capacity = Constants.DefaultCapacity)
         {
-            dense = new AutoGrowOnlyListUInt(density);
-            sparse = new AutoGrowOnlyListUInt(density);
+            dense = new AutoGrowOnlyListUInt(step, capacity);
+            sparse = new AutoGrowOnlyListUInt(step, capacity);
             n = 0;
         }
     }

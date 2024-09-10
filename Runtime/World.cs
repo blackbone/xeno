@@ -14,7 +14,7 @@ namespace Xeno
         public uint EntityCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => entities.Count;
+            get => entities.count;
         }
 
         public void Dispose() => Worlds.Remove(this);
@@ -27,9 +27,8 @@ namespace Xeno
             where T : struct, IComponent
         {
             var entity = entities.Create();
-            var components = Components<T>();
-            components.Add(entity.Id, component);
-            entities.archetypes[entity.Id].Set(Component<T>.Index);
+            Components<T>().Add(entity.Id, component);
+            AddToArchetype<T>(entity.Id);
             return entity;
         }
 
@@ -41,8 +40,7 @@ namespace Xeno
             var entity = entities.Create();
             Components<T1>().Add(entity.Id, component1);
             Components<T2>().Add(entity.Id, component2);
-            entities.archetypes[entity.Id].Set(Component<T1>.Index);
-            entities.archetypes[entity.Id].Set(Component<T2>.Index);
+            AddToArchetype<T1, T2>(entity.Id);
             return entity;
         }
 
@@ -56,9 +54,7 @@ namespace Xeno
             Components<T1>().Add(entity.Id, component1);
             Components<T2>().Add(entity.Id, component2);
             Components<T3>().Add(entity.Id, component3);
-            entities.archetypes[entity.Id].Set(Component<T1>.Index);
-            entities.archetypes[entity.Id].Set(Component<T2>.Index);
-            entities.archetypes[entity.Id].Set(Component<T3>.Index);
+            AddToArchetype<T1, T2, T3>(entity.Id);
             return entity;
         }
 
@@ -74,34 +70,21 @@ namespace Xeno
             Components<T2>().Add(entity.Id, component2);
             Components<T3>().Add(entity.Id, component3);
             Components<T4>().Add(entity.Id, component4);
-            entities.archetypes[entity.Id].Set(Component<T1>.Index);
-            entities.archetypes[entity.Id].Set(Component<T2>.Index);
-            entities.archetypes[entity.Id].Set(Component<T3>.Index);
-            entities.archetypes[entity.Id].Set(Component<T4>.Index);
+            AddToArchetype<T1, T2, T3, T4>(entity.Id);
             return entity;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DeleteEntity(in Entity entity)
         {
-            if (entities.Count <= entity.Id) return;
+            if (entities.count <= entity.Id) return;
             if (entities.At(entity.Id).Version != entity.Version) return;
             entities.Remove(entity.Id);
             for (var i = 0; i < Component.Index; i++)
-                componentStores.AtRO((uint)i)?.RemoveInternal(entity.Id);
+                componentStores.AtRO(i)?.RemoveInternal(entity.Id);
             entities.archetypes[entity.Id].Reset();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<Entity> Entities()
-        {
-            for (uint i = 0; i < entities.Count; i++)
-            {
-                if (disabled.Get(i)) continue;
-                yield return entities.At(i);
-            }
-        }
-        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Entities<T>(ComponentDelegate<T> update)
             where T : struct, IComponent
@@ -109,12 +92,7 @@ namespace Xeno
             var cs1 = componentStores.AtRO(Component<T>.Index).As<T>();
             var count = cs1.Count();
             for (uint i = 0; i < count; i++)
-            {
-                // var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
-
                 update(ref cs1.RefAt(i));
-            }
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -151,8 +129,6 @@ namespace Xeno
             for (uint i = 0; i < count; i++)
             {
                 var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
-
                 update(entities.At(entityId), uniform, ref cs1.RefAt(i));
             }
         }
@@ -162,26 +138,20 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
         {
-            var mask = new FixedBitSet();
-            mask.Set(Component<T1>.Index);
-            mask.Set(Component<T2>.Index);
+            FixedBitSet mask = default;
+            mask.Set(Component<T1>.Index).Set(Component<T2>.Index);
 
             var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
-            
-            var count = 16;
-            var n = 0u;
-            Span<Entity> current = stackalloc Entity[count];
-            bool end;
-            do
-            {
-                end = entities.With(mask, ref n, ref current, ref count);
-                for (var i = 0; i < count; i++)
-                {
-                    var eid = current[i].Id;
+
+            entities.ForEach(mask, Iterate);
+            return;
+
+            void Iterate(in ReadOnlySpan<uint> entityIds) {
+                foreach (var eid in entityIds) {
                     update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid));
                 }
-            } while (!end);
+            }
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -196,19 +166,14 @@ namespace Xeno
             var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
             
-            var count = 16;
-            var n = 0u;
-            Span<Entity> current = stackalloc Entity[count];
-            bool end;
-            do
-            {
-                end = entities.With(mask, ref n, ref current, ref count);
-                for (var i = 0; i < count; i++)
-                {
-                    var eid = current[i].Id;
-                    update(entities.At(eid), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid));
+            entities.ForEach(mask, Iterate);
+            return;
+
+            void Iterate(in ReadOnlySpan<uint> entityIds) {
+                foreach (var eid in entityIds) {
+                    update(new Entity(eid, entities.versions[eid], Id), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid));
                 }
-            } while (!end);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -226,19 +191,14 @@ namespace Xeno
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
             var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
 
-            var count = 16;
-            var n = 0u;
-            Span<Entity> current = stackalloc Entity[count];
-            bool end;
-            do
-            {
-                end = entities.With(mask, ref n, ref current, ref count);
-                for (var i = 0; i < count; i++)
-                {
-                    var eid = current[i].Id;
+            entities.ForEach(mask, Iterate);
+            return;
+
+            void Iterate(in ReadOnlySpan<uint> entityIds) {
+                foreach (var eid in entityIds) {
                     update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid));
                 }
-            } while (!end);
+            }
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -256,19 +216,14 @@ namespace Xeno
             var cs2 = componentStores.AtRO(Component<T2>.Index).As<T2>();
             var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
 
-            var count = 16;
-            var n = 0u;
-            Span<Entity> current = stackalloc Entity[count];
-            bool end;
-            do
-            {
-                end = entities.With(mask, ref n, ref current, ref count);
-                for (var i = 0; i < count; i++)
-                {
-                    var eid = current[i].Id;
-                    update(entities.At(eid), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid));
+            entities.ForEach(mask, Iterate);
+            return;
+
+            void Iterate(in ReadOnlySpan<uint> entityIds) {
+                foreach (var eid in entityIds) {
+                    update(new Entity(eid, entities.versions[eid], Id), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid));
                 }
-            } while (!end);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -289,19 +244,14 @@ namespace Xeno
             var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
             var cs4 = componentStores.AtRO(Component<T4>.Index).As<T4>();
 
-            var count = 16;
-            var n = 0u;
-            Span<Entity> current = stackalloc Entity[count];
-            bool end;
-            do
-            {
-                end = entities.With(mask, ref n, ref current, ref count);
-                for (var i = 0; i < count; i++)
-                {
-                    var eid = current[i].Id;
+            entities.ForEach(mask, Iterate);
+            return;
+
+            void Iterate(in ReadOnlySpan<uint> entityIds) {
+                foreach (var eid in entityIds) {
                     update(ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid), ref cs4.RefUnsafe(eid));
                 }
-            } while (!end);
+            }
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -322,19 +272,14 @@ namespace Xeno
             var cs3 = componentStores.AtRO(Component<T3>.Index).As<T3>();
             var cs4 = componentStores.AtRO(Component<T4>.Index).As<T4>();
 
-            var count = 16;
-            var n = 0u;
-            Span<Entity> current = stackalloc Entity[count];
-            bool end;
-            do
-            {
-                end = entities.With(mask, ref n, ref current, ref count);
-                for (var i = 0; i < count; i++)
-                {
-                    var eid = current[i].Id;
-                    update(entities.At(eid), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid), ref cs4.RefUnsafe(eid));
+            entities.ForEach(mask, Iterate);
+            return;
+
+            void Iterate(in ReadOnlySpan<uint> entityIds) {
+                foreach (var eid in entityIds) {
+                    update(new Entity(eid, entities.versions[eid], Id), ref cs1.RefUnsafe(eid), ref cs2.RefUnsafe(eid), ref cs3.RefUnsafe(eid), ref cs4.RefUnsafe(eid));
                 }
-            } while (!end);
+            }
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -342,8 +287,7 @@ namespace Xeno
             where T1 : struct, IComponent
         {
             var cs1 = componentStores.AtRO(Component<T1>.Index).As<T1>();
-            var count = cs1.Count();
-            return (int)count;
+            return cs1.Count();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -358,7 +302,6 @@ namespace Xeno
             for (uint i = 0; i < count; i++)
             {
                 var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
                 if (!cs2.Has(entityId)) continue;
 
                 result++;
@@ -381,7 +324,6 @@ namespace Xeno
             for (uint i = 0; i < count; i++)
             {
                 var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
                 if (!cs2.Has(entityId)) continue;
                 if (!cs3.Has(entityId)) continue;
 
@@ -407,7 +349,6 @@ namespace Xeno
             for (uint i = 0; i < count; i++)
             {
                 var entityId = cs1.GetEntity(i);
-                // if (disabled.Get(entityId)) continue;
                 if (!cs2.Has(entityId)) continue;
                 if (!cs3.Has(entityId)) continue;
                 if (!cs4.Has(entityId)) continue;
@@ -479,8 +420,7 @@ namespace Xeno
             defaultSystemGroup.DetachFromWorld(this);
         }
 
-        public void EnsureCapacity(int capacity)
-            => entities.Ensure(capacity);
+        public void EnsureCapacity(int capacity) => entities.Ensure(capacity);
         
         public void EnsureCapacity<T>(int capacity) where T : struct, IComponent
         {

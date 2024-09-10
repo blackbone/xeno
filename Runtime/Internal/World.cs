@@ -9,11 +9,10 @@ namespace Xeno
     {
         private readonly SystemGroup defaultSystemGroup = new("Default");
         private readonly LinkedList<SystemGroup> systemGroups = new();
-        
-        private AutoGrowOnlyList<ComponentStore> componentStores;
-        private BitSet disabled;
-        private EntityJournal entities;
 
+        private AutoGrowOnlyList<ComponentStore> componentStores;
+        private EntityJournal entities;
+        
         internal event Action Started;
         internal event UpdateDelegate PreUpdate; 
         internal event UpdateDelegate Update; 
@@ -26,9 +25,9 @@ namespace Xeno
             Name = name;
             Id = id;
 
-            entities = new EntityJournal(this);
             componentStores = new AutoGrowOnlyList<ComponentStore>(16);
-            disabled = new BitSet(1024);
+            entities = new EntityJournal(this, 16384);
+            
             Worlds.Add(this);
         }
 
@@ -44,18 +43,14 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Enable(uint entityId)
-            => disabled.Unset(entityId);
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Disable(uint entityId)
-            => disabled.Set(entityId);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AddToArchetype<T1>(uint entityId)
             where T1 : struct, IComponent
         {
-            entities.archetypes[entityId].Set(Component<T1>.Index);
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
+                .Set(Component<T1>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -63,9 +58,12 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
         {
-            entities.archetypes[entityId]
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
                 .Set(Component<T1>.Index)
                 .Set(Component<T2>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -74,10 +72,13 @@ namespace Xeno
             where T2 : struct, IComponent
             where T3 : struct, IComponent
         {
-            entities.archetypes[entityId]
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
                 .Set(Component<T1>.Index)
                 .Set(Component<T2>.Index)
                 .Set(Component<T3>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -87,17 +88,24 @@ namespace Xeno
             where T3 : struct, IComponent
             where T4 : struct, IComponent
         {
-            entities.archetypes[entityId]
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
                 .Set(Component<T1>.Index)
                 .Set(Component<T2>.Index)
                 .Set(Component<T3>.Index)
                 .Set(Component<T4>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void RemoveFromArchetype<T>(uint entityId) where T : struct, IComponent
         {
-            entities.archetypes[entityId].Unset(Component<T>.Index);
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
+                .Unset(Component<T>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -105,9 +113,12 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
         {
-            entities.archetypes[entityId]
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
                 .Unset(Component<T1>.Index)
                 .Unset(Component<T2>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -116,10 +127,13 @@ namespace Xeno
             where T2 : struct, IComponent
             where T3 : struct, IComponent
         {
-            entities.archetypes[entityId]
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
                 .Unset(Component<T1>.Index)
                 .Unset(Component<T2>.Index)
                 .Unset(Component<T3>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -129,11 +143,14 @@ namespace Xeno
             where T3 : struct, IComponent
             where T4 : struct, IComponent
         {
-            entities.archetypes[entityId]
+            var oldArchetype = entities.archetypes[entityId];
+            ref var newArchetype = ref entities.archetypes[entityId]
                 .Unset(Component<T1>.Index)
                 .Unset(Component<T2>.Index)
                 .Unset(Component<T3>.Index)
                 .Unset(Component<T4>.Index);
+
+            entities.ChangeArchetype(entityId, oldArchetype, newArchetype);
         }
     }
 }

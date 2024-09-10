@@ -65,14 +65,4 @@ public class Program
             // new Benchmark2(100_000, 20).Run(1_000).Dispose();
             // new Benchmark3(100_000, 20).Run(1_000).Dispose();
     }
-
-    private static void Test<T>() where T : unmanaged
-    {
-        const int iterations = 16;
-        var sum = TimeSpan.Zero;
-        for (var i = 0; i < iterations; i++)
-            sum += new GrowOnlyListTest<T>().Run();
-        sum /= iterations;
-        Console.WriteLine($"avg is {sum}");
-    }
 }

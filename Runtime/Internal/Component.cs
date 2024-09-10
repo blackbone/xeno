@@ -4,7 +4,7 @@ namespace Xeno
 {
     internal abstract class Component
     {
-        protected internal static uint Index;
+        protected internal static int Index;
     }
 
     internal abstract class Component<T> : Component where T : struct, IComponent
@@ -14,7 +14,7 @@ namespace Xeno
         public static Type Type { get; } = typeof(T);
 
         // ReSharper disable once StaticMemberInGenericType
-        public new static readonly uint Index = Component.Index++;
+        public new static readonly int Index = Component.Index++;
         public static int Id => Type.MetadataToken;
         public static ref T Default => ref _defaultValue;
         private Component() { }

@@ -6,18 +6,58 @@ using Unsafe = Unity.Collections.LowLevel.Unsafe.UnsafeUtility;
 
 namespace Xeno.Collections
 {
+    public struct GrowOnlyListInt
+    {
+        internal readonly int step;
+        internal readonly int capacityGrow;
+
+        internal int count;
+        internal int capacity;
+        internal int[][] data;
+
+        public GrowOnlyListInt(in int step = Constants.DefaultStep, in int capacity = Constants.DefaultCapacity, in int capacityGrow = Constants.DefaultCapacityGrow)
+        {
+            this.step = step;
+
+            count = 0;
+            this.capacity = capacity;
+            this.capacityGrow = capacityGrow;
+            data = this.capacity == 0 ? Array.Empty<int[]>() : new int[capacity][];
+        }
+
+        public ref int this[in int index]
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                var blockIndex = index / step;
+                var block = data[blockIndex] ??= new int[step];
+                return ref block[index % step];
+            }
+        }
+
+        public ref int this[in uint index]
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                var blockIndex = index / step;
+                var block = data[blockIndex] ??= new int[step];
+                return ref block[index % step];
+            }
+        }
+    }
+
     public struct GrowOnlyListUInt
     {
-        private const uint DefaultStep = 4;
+        internal readonly int step;
+        internal readonly int capacityGrow;
 
-        private readonly uint step;
-        private readonly uint capacityGrow;
+        internal int count;
+        internal int capacity;
+        internal uint[][] data;
 
-        internal uint count;
-        private uint capacity;
-        private uint[][] data;
-
-        public GrowOnlyListUInt(uint step = DefaultStep, uint capacity = 0, uint capacityGrow = 32)
+        public GrowOnlyListUInt(in int step = Constants.DefaultStep, in int capacity = Constants.DefaultCapacity, in int capacityGrow = Constants.DefaultCapacityGrow)
         {
             this.step = step;
 
@@ -26,14 +66,8 @@ namespace Xeno.Collections
             this.capacityGrow = capacityGrow;
             data = this.capacity == 0 ? Array.Empty<uint[]>() : new uint[capacity][];
         }
-
-        public uint Count
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => count;
-        }
-
-        public ref uint this[uint index]
+        
+        public ref uint this[in int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -44,54 +78,28 @@ namespace Xeno.Collections
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(uint value)
+        public ref uint this[in uint index]
         {
-            if (count >= capacity) // resize container array
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
             {
-                var idx = (uint)data.Length;
-                Array.Resize(ref data, (int)(idx + capacityGrow));
-                data[idx] = new uint[step];
-                capacity = (idx + capacityGrow) * step;
-            }
-
-            this[count] = value;
-            count++;
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public uint TakeLast()
-        {
-            count--;
-            return this[count];
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Ensure(in int capacity)
-        {
-            if (capacity >= this.capacity) // resize container array
-            {
-                var n = (int)(capacity / step + 1);
-                Array.Resize(ref data, n);
-                var i = 0;
-                while (i < n) data[i++] ??= new uint[step];
+                var blockIndex = index / step;
+                var block = data[blockIndex] ??= new uint[step];
+                return ref block[index % step];
             }
         }
     }
-    
-    
+
     public struct GrowOnlyListFixedBitSet
     {
-        private const uint DefaultStep = 4;
+        internal readonly int step;
+        internal readonly int capacityGrow;
 
-        private readonly uint step;
-        private readonly uint capacityGrow;
+        internal int count;
+        internal int capacity;
+        internal FixedBitSet[][] data;
 
-        internal uint count;
-        private uint capacity;
-        private FixedBitSet[][] data;
-
-        public GrowOnlyListFixedBitSet(uint step = DefaultStep, uint capacity = 0, uint capacityGrow = 32)
+        public GrowOnlyListFixedBitSet(in int step = Constants.DefaultStep, in int capacity = Constants.DefaultCapacity, in int capacityGrow = Constants.DefaultCapacityGrow)
         {
             this.step = step;
 
@@ -101,13 +109,7 @@ namespace Xeno.Collections
             data = this.capacity == 0 ? Array.Empty<FixedBitSet[]>() : new FixedBitSet[capacity][];
         }
 
-        public uint Count
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => count;
-        }
-
-        public ref FixedBitSet this[uint index]
+        public ref FixedBitSet this[in int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -118,37 +120,108 @@ namespace Xeno.Collections
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(FixedBitSet value)
+        public ref FixedBitSet this[in uint index]
         {
-            if (count >= capacity) // resize container array
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
             {
-                var idx = (uint)data.Length;
-                Array.Resize(ref data, (int)(idx + capacityGrow));
-                data[idx] = new FixedBitSet[step];
-                capacity = (idx + capacityGrow) * step;
+                var blockIndex = index / step;
+                var block = data[blockIndex] ??= new FixedBitSet[step];
+                return ref block[index % step];
+            }
+        }
+    }
+
+    public static class GrowOnlyListIntExtensions {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Add(this ref GrowOnlyListInt list, in int value)
+        {
+            if (list.count >= list.capacity) // resize container array
+            {
+                var idx = list.data.Length;
+                Array.Resize(ref list.data, idx + list.capacityGrow);
+                list.data[idx] = new int[list.step];
+                list.capacity = (idx + list.capacityGrow) * list.step;
             }
 
-            this[count] = value;
-            count++;
+            list[list.count] = value;
+            list.count++;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public FixedBitSet TakeLast()
+        public static void Ensure(this ref GrowOnlyListInt list, in int capacity)
         {
-            count--;
-            return this[count];
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Ensure(in int capacity)
-        {
-            if (capacity >= this.capacity) // resize container array
+            if (capacity >= list.capacity) // resize container array
             {
-                var n = (int)(capacity / step + 1);
-                Array.Resize(ref data, n);
+                var n = capacity /list. step + 1;
+                Array.Resize(ref list.data, n);
                 var i = 0;
-                while (i < n) data[i++] ??= new FixedBitSet[step];
+                while (i < n) list.data[i++] ??= new int[list.step];
+            }
+        }
+    }
+
+    public static class GrowOnlyListUIntExtensions {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Add(this ref GrowOnlyListUInt list, in uint value)
+        {
+            if (list.count >= list.capacity) // resize container array
+            {
+                var idx = list.data.Length;
+                Array.Resize(ref list.data, idx + list.capacityGrow);
+                list.data[idx] = new uint[list.step];
+                list.capacity = (idx + list.capacityGrow) * list.step;
+            }
+
+            list[list.count] = value;
+            list.count++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Ensure(this ref GrowOnlyListUInt list, in int capacity)
+        {
+            if (capacity >= list.capacity) // resize container array
+            {
+                var n = capacity / list.step + 1;
+                Array.Resize(ref list.data, n);
+                var i = 0;
+                while (i < n) list.data[i++] ??= new uint[list.step];
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint TakeLast(this ref GrowOnlyListUInt list)
+        {
+            list.count--;
+            return list[list.count];
+        }
+    }
+
+    public static class GrowOnlyListFixedBitSetExtensions {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Add(this ref GrowOnlyListFixedBitSet list, in FixedBitSet value)
+        {
+            if (list.count >= list.capacity) // resize container array
+            {
+                var idx = list.data.Length;
+                Array.Resize(ref list.data, idx + list.capacityGrow);
+                list.data[idx] = new FixedBitSet[list.step];
+                list.capacity = (idx + list.capacityGrow) * list.step;
+            }
+
+            list[list.count] = value;
+            list.count++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Ensure(this ref GrowOnlyListFixedBitSet list, in int capacity)
+        {
+            if (capacity >= list.capacity) // resize container array
+            {
+                var n = capacity /list. step + 1;
+                Array.Resize(ref list.data, n);
+                var i = 0;
+                while (i < n) list.data[i++] ??= new FixedBitSet[list.step];
             }
         }
     }
