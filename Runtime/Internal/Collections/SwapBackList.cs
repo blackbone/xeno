@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -49,9 +50,6 @@ namespace Xeno.Collections
     internal static class SwapBackListExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T At<T>(this ref SwapBackList<T> list, uint index) => ref list.data[index];
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Add<T>(this ref SwapBackList<T> list, in T value)
         {
             if (list.count >= list.capacity) // resize container array
@@ -88,23 +86,14 @@ namespace Xeno.Collections
 
     internal static class SwapBackListUIntExtensions {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref uint At(this ref SwapBackListUInt list, in int index) => ref list.data[index];
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint RemoveAtAndSwapBack(this ref SwapBackListUInt list, in int index)
+        public static void RemoveAtAndSwapBack(this ref SwapBackListUInt list, in uint index)
         {
-            var value = list.At(index);
             list.count--;
-
-            // if not last element
-            if (index < list.count)
-                list.At(index) = list.At(list.count);
-
-            return value;
+            list.data[index] = list.data[list.count];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(this ref SwapBackListUInt list, in uint value)
+        public static uint Add(this ref SwapBackListUInt list, in uint value)
         {
             if (list.count >= list.capacity) // resize container array
             {
@@ -113,11 +102,16 @@ namespace Xeno.Collections
                 list.capacity = newCapacity;
             }
 
-            list.At(list.count) = value;
+            list.data[list.count] = value;
             list.count++;
+
+            return (uint)list.count - 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ReadOnlySpan<uint> GetSpan(this ref SwapBackListUInt list) => new(list.data, 0, list.count);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Clear(this ref SwapBackListUInt list) => list.count = 0;
     }
 }

@@ -22,9 +22,11 @@ namespace Xeno.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint Add(this ref SparseSet set, in uint value) // 10
         {
+            set.sparse.Ensure((int)value);
             var index = set.n;
-            set.dense.At(index) = value; // dense[0] = 10
-            set.sparse.At(value) = index; // sparse[10] = 0
+            set.dense.Ensure((int)index);
+            set.dense.data[index] = value; // dense[0] = 10
+            set.sparse.data[value] = index; // sparse[10] = 0
             set.n++;
 
             return index;
@@ -33,29 +35,26 @@ namespace Xeno.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint Remove(this ref SparseSet set, in uint value)
         {
-            var index = set.sparse.At(value);
+            var index = set.sparse.data[value];
             set.n--;
-            set.dense.At(set.sparse.At(value)) = set.dense.At(set.n);
-            set.sparse.At(set.dense.At(set.n)) = set.sparse.At(value);
+            set.dense.data[set.sparse.data[value]] = set.dense.data[set.n];
+            set.sparse.data[set.dense.data[set.n]] = set.sparse.data[value];
             return index;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Contains(this ref SparseSet set, in uint value, ref uint index)
         {
-            ref var sparse = ref set.sparse;
-            index = sparse.At(value);
-            ref var dense = ref set.dense;
-            return index < set.n && dense.At(index) == value;
+            if (value >= set.sparse.data.Length) return false;
+            index = set.sparse.data[value];
+            return index < set.n && set.dense.data[index] == value;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Contains(this ref SparseSet set, in uint value)
-        {
-            ref var sparse = ref set.sparse;
-            ref var index = ref sparse.At(value);
-            ref var dense = ref set.dense;
-            return index < set.n && dense.At(index) == value;
+        public static bool Contains(this ref SparseSet set, in uint value) {
+            if (value >= set.sparse.data.Length) return false;
+            ref var index = ref set.sparse.data[value];
+            return index < set.n && set.dense.data[index] == value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

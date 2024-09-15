@@ -50,18 +50,10 @@ namespace Xeno
         {
             uint index = default;
             if (store.mapping.Contains(entityId, ref index))
-                return ref store.components.At(index);
+                return ref store.components.data[index];
 
             return ref Component<T>.Default;
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static ref T RefUnsafe<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
-            => ref store.components.At(store.mapping.sparse.At(entityId));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T RefAt<T>(this ComponentStore<T> store, in uint index) where T : struct, IComponent
-            => ref store.components.At(index);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Add<T>(this ComponentStore<T> store, uint entityId, in T value) where T : struct, IComponent
@@ -80,7 +72,7 @@ namespace Xeno
         {
             uint index = default;
             if (store.mapping.Contains(entityId, ref index))
-                store.components.At(index) = value;
+                store.components.data[index] = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -88,35 +80,42 @@ namespace Xeno
         {
             uint index = default;
             if (store.mapping.Contains(entityId, ref index))
-                return store.components.At(index);
+                return store.components.data[index];
 
             return Component<T>.Default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T Remove<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
+        public static bool Remove<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
         {
             uint index = default;
-            if (store.mapping.Contains(entityId))
+            if (store.mapping.Contains(entityId, ref index))
             {
                 store.mapping.Remove(entityId);
-                return store.components.RemoveAtAndSwapBack(index);
+                store.components.RemoveAtAndSwapBack(index);
+                return true;
             }
 
-            return Component<T>.Default;
+            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RemoveInternal<T>(this ComponentStore<T> store, in uint entityId) where T : struct, IComponent
+        public static bool Remove<T>(this ComponentStore<T> store, in uint entityId, ref T value) where T : struct, IComponent
         {
-            if (store.mapping.Contains(entityId)) return;
-            var index = store.mapping.Remove(entityId);
-            store.components.RemoveAtAndSwapBack(index);
+            uint index = default;
+            if (store.mapping.Contains(entityId, ref index))
+            {
+                store.mapping.Remove(entityId);
+                value = store.components.RemoveAtAndSwapBack(index);
+                return true;
+            }
+
+            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint GetEntity<T>(this ComponentStore<T> store, in uint index) where T : struct, IComponent
-            => store.mapping.dense.At(index);
+            => store.mapping.dense.data[index];
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Ensure<T>(this ComponentStore<T> store, in int capacity) where T : struct, IComponent

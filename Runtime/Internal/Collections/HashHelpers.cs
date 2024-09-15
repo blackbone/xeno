@@ -6,41 +6,22 @@ namespace Xeno.Collections
 {
     internal static class HashHelpers
     {
-        internal static readonly int[] capacitySizes = {
-            3,
-            15,
-            63,
-            255,
-            1_023,
-            4_095,
-            16_383,
-            65_535,
-            131_071,
-            262_143,
-            524_287,
-            1_048_575,
-            2_097_151,
-            4_194_303,
-            8_388_607,
-            16_777_215,
-            33_554_431,
-            67_108_863,
-            134_217_727,
-            268_435_455,
-            536_870_912,
-            1_073_741_823
-        };
-        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetCapacity(int min) {
-            for (int index = 0, length = capacitySizes.Length; index < length; ++index) {
-                var prime = capacitySizes[index];
-                if (prime >= min) {
-                    return prime;
-                }
-            }
+            // Do the smearing which turns (for example)
+            // this: 0000 0101 0011
+            // into: 0000 0111 1111
+            min |= min >> 1;
+            min |= min >> 2;
+            min |= min >> 4;
+            min |= min >> 8;
+            min |= min >> 16;
 
-            throw new Exception("Capacity is too big");
+            // add one more to overflow smear and turn
+            // this : 0000 0111 1111
+            // into : 0000 1000 0000
+            // which is nearest PoT *greater* than value
+            return min + 1;
         }
         
         internal static int PowerOf2(int v)
