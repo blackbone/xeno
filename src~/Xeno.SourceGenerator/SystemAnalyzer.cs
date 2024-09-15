@@ -59,7 +59,7 @@ public sealed class SystemAnalyzer : DiagnosticAnalyzer
         "Change method return type to void.");
     
     private static readonly DiagnosticDescriptor SystemMethodNotMachSignature_NoParameters = new(
-        "XEN003.1",
+        "XEN003.2",
         "Invalid method signature",
         "System method must return have parameters",
         "Xeno",

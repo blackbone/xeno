@@ -2,20 +2,21 @@ using System.Runtime.InteropServices;
 
 namespace Xeno
 {
+    /// <summary>
+    /// Entity representation struct. 9 bytes only.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public readonly struct Entity
+    public readonly partial struct Entity
     {
-        internal readonly byte WorldId;
         internal readonly uint Id;
         internal readonly uint Version;
+        internal readonly ushort WorldId;
 
-        internal Entity(uint id, uint version, byte worldId)
-        {
-            Id = id;
-            Version = version;
-            WorldId = worldId;
+        public override string ToString() => $"[{WorldId}|{Id}({Version})]{GetArchetype()}";
+
+        private string GetArchetype() {
+            if (!Worlds.TryGet(WorldId, out var world)) return "N/A";
+            return world.entityArchetypes[Id].ToString();
         }
-
-        public override string ToString() => $"[{Id}({Version})]";
     }
 }

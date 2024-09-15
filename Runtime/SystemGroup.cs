@@ -36,22 +36,22 @@ namespace Xeno
                 } while (current != null);
             }
             
-            // world.started += Start;
-            // world.preUpdate += PreUpdate;
-            // world.update += Update;
-            // world.postUpdate += PostUpdate;
-            // world.stopped += Stop;
+            world.Started += Start;
+            world.PreUpdate += PreUpdate;
+            world.Update += Update;
+            world.PostUpdate += PostUpdate;
+            world.Stopped += Stop;
         }
 
         internal void DetachFromWorld(in World world)
         {
             if (this.world != world) throw new InvalidOperationException("Trying detach system instance from world it not belongs to!");
             
-            // world.started -= Start;
-            // world.preUpdate -= PreUpdate;
-            // world.update -= Update;
-            // world.postUpdate -= PostUpdate;
-            // world.stopped -= Stop;
+            world.Started -= Start;
+            world.PreUpdate -= PreUpdate;
+            world.Update -= Update;
+            world.PostUpdate -= PostUpdate;
+            world.Stopped -= Stop;
             
             if (systems.Count > 0)
             {
@@ -70,20 +70,20 @@ namespace Xeno
         {
             systems.AddLast(system);
             
-            // if (system.IsWorldStartSystem) started += system.Start;
-            // if (system.IsPreUpdateSystem) preUpdate += system.PreUpdate;
-            // if (system.IsUpdateSystem) update += system.Update;
-            // if (system.IsPostUpdateSystem) postUpdate += system.PostUpdate;
-            // if (system.IsWordStopSystem) stopped += system.Stop;
+            if (system.IsWorldStartSystem) started += system.Start;
+            if (system.IsPreUpdateSystem) preUpdate += system.PreUpdate;
+            if (system.IsUpdateSystem) update += system.Update;
+            if (system.IsPostUpdateSystem) postUpdate += system.PostUpdate;
+            if (system.IsWordStopSystem) stopped += system.Stop;
         }
         
         public void RemoveSystem(in System system)
         {
-            // if (system.IsWorldStartSystem) started -= system.Start;
-            // if (system.IsPreUpdateSystem) preUpdate -= system.PreUpdate;
-            // if (system.IsUpdateSystem) update -= system.Update;
-            // if (system.IsPostUpdateSystem) postUpdate -= system.PostUpdate;
-            // if (system.IsWordStopSystem) stopped -= system.Stop;
+            if (system.IsWorldStartSystem) started -= system.Start;
+            if (system.IsPreUpdateSystem) preUpdate -= system.PreUpdate;
+            if (system.IsUpdateSystem) update -= system.Update;
+            if (system.IsPostUpdateSystem) postUpdate -= system.PostUpdate;
+            if (system.IsWordStopSystem) stopped -= system.Stop;
             
             systems.Remove(system);
         }

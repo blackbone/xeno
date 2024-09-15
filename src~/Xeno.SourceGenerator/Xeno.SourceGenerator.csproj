@@ -10,7 +10,7 @@
         <PackageId>Xeno.SourceGenerator</PackageId>
 
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.0.1</PackageVersion>
+        <PackageVersion>0.1.6</PackageVersion>
         <Title>General purpose ECS Source Generator</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides source generator for XENO ECS to get basic stuff.</Description>
@@ -44,6 +44,10 @@
         <None Remove="obj~\**"/>
         <None Remove="bin~\**"/>
         <None Remove="**\*.meta"/>
+        <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    </ItemGroup>
+
+    <ItemGroup>
     </ItemGroup>
 
 

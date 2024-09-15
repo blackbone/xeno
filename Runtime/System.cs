@@ -19,28 +19,16 @@ namespace Xeno
         protected internal abstract void PostUpdate(in float delta);
         protected internal abstract void Stop();
 
-        internal void AttachToWorld(in World world)
+        internal void AttachToWorld(in World worldToAttach)
         {
-            if (this.world != null) throw new InvalidOperationException("Trying attach system instance to more than one world!");
-            this.world = world;
-
-            if (IsWorldStartSystem) world.Started += Start;
-            if (IsPreUpdateSystem) world.PreUpdate += PreUpdate;
-            if (IsUpdateSystem) world.Update += Update;
-            if (IsPostUpdateSystem) world.PostUpdate += PostUpdate;
-            if (IsWordStopSystem) world.Stopped += Stop;
+            if (world != null) throw new InvalidOperationException("Trying attach system instance to more than one world!");
+            world = worldToAttach;
         }
 
-        internal void DetachFromWorld(in World world)
+        internal void DetachFromWorld(in World worldToAttach)
         {
-            if (this.world != world) throw new InvalidOperationException("Trying detach system instance from world it not belongs to!");
-            this.world = null;
-            
-            if (IsWorldStartSystem) world.Started -= Start;
-            if (IsPreUpdateSystem) world.PreUpdate -= PreUpdate;
-            if (IsUpdateSystem) world.Update -= Update;
-            if (IsPostUpdateSystem) world.PostUpdate -= PostUpdate;
-            if (IsWordStopSystem) world.Stopped -= Stop;
+            if (world != worldToAttach) throw new InvalidOperationException("Trying detach system instance from world it not belongs to!");
+            world = null;
         }
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -13,6 +12,8 @@ namespace Xeno.SourceGenerator
         private INamedTypeSymbol componentInterfaceType;
         private INamedTypeSymbol entityType;
         private INamedTypeSymbol deltaType;
+        public INamedTypeSymbol deltaAttributeType;
+        public INamedTypeSymbol useAttributeType;
         private INamedTypeSymbol systemAttributeType;
         private INamedTypeSymbol systemMethodAttributeType;
         private INamedTypeSymbol includeDisabledAttributeType;
@@ -38,6 +39,8 @@ namespace Xeno.SourceGenerator
             if (!Ensure.Type(compilation, "Xeno.Entity", out entityType)) return;
             if (!Ensure.Type(compilation, "Xeno.IComponent", out componentInterfaceType)) return;
             if (!Ensure.Type(compilation, "Xeno.SystemAttribute", out systemAttributeType)) return;
+            if (!Ensure.Type(compilation, "Xeno.DeltaAttribute", out deltaAttributeType)) return;
+            if (!Ensure.Type(compilation, "Xeno.UseAttribute", out useAttributeType)) return;
             if (!Ensure.Type(compilation, "Xeno.SystemMethodAttribute", out systemMethodAttributeType)) return;
             if (!Ensure.Type(compilation, "Xeno.Filter+IncludeDisabledAttribute", out includeDisabledAttributeType)) return;
             if (!Ensure.Type(compilation, "Xeno.Filter+ChangedOnlyAttribute", out changedOnlyAttributeType)) return;
@@ -104,4 +107,3 @@ namespace Xeno.SourceGenerator
         }
     }
 }
-

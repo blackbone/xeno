@@ -140,7 +140,7 @@ _TeamCity*
 
 # AxoCover is a Code Coverage Tool
 .axoCover/*
-!.axoCover/settings.json
+.axoCover/settings.json
 
 # Coverlet is a free, cross platform Code Coverage Tool
 coverage*.json
@@ -378,10 +378,10 @@ FodyWeavers.xsd
 
 # VS Code files for those working on multiple tools
 .vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
 *.code-workspace
 
 # Local History for Visual Studio Code

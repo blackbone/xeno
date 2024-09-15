@@ -30,6 +30,7 @@ namespace {ns}
 {{
     public partial class {systemName}{(genericArgs.Length > 0 ? $"<{string.Join(", ", genericArgs)}>" : "")} : global::Xeno.System
     {{
+        {PlaceUniforms(systemMethods.Where(g => g.Key != (int)SystemMethodType.Startup && g.Key != (int)SystemMethodType.Shutdown).SelectMany(kv => kv.Value))}
         {PlaceDelegates(systemMethods.Where(g => g.Key != (int)SystemMethodType.Startup && g.Key != (int)SystemMethodType.Shutdown).SelectMany(kv => kv.Value))}
         
         protected override bool IsWorldStartSystem => {(systemMethods.ContainsKey((int)SystemMethodType.Startup) ? "true" : "false")};
@@ -96,15 +97,16 @@ namespace {ns}
                 // void (ref C1, ref C2, ref C3...)
                 if (parameters.All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
                 {
-                    sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+                    sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
                     continue;
                 }
                 
                 // void (in Entity, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default) && method.Parameters[0].RefKind == RefKind.In
-                         && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
+                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
+                    && method.Parameters[0].RefKind == RefKind.In
+                    && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
                 {
-                    sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+                    sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
 
                     continue;
                 }
@@ -113,15 +115,16 @@ namespace {ns}
                 if (method.Parameters[0].Type.IsValueType && method.Parameters[0].RefKind == RefKind.In
                     && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
                 {
-                    if (method.Parameters[0].Type.Equals(deltaType, SymbolEqualityComparer.Default))
+                    if (method.Parameters[0].Type.Equals(deltaType, SymbolEqualityComparer.Default)
+                        && method.Parameters[0].GetAttributes().Any(a => a.AttributeClass.Equals(deltaAttributeType, SymbolEqualityComparer.Default)))
                     {
-                        sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
-                        continue;
+                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
                     }
                     else
                     {
-                        // TODO: Handle other uniforms
+                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {method.Name}Uniform_{method.GetHashCode()});");
                     }
+                    continue;
                 }
                 
                 // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
@@ -132,12 +135,11 @@ namespace {ns}
                 {
                     if (method.Parameters[1].Type.Equals(deltaType, SymbolEqualityComparer.Default))
                     {
-                        sb.AppendLine($"world.Entities({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
-                        continue;
+                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
                     }
                     else
                     {
-                        // TODO: Handle other uniforms
+                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {method.Name}Uniform_{method.GetHashCode()});");
                     }
                 }
                 
@@ -162,6 +164,39 @@ namespace {ns}
             }
             return sb.ToString();
         }
+
+
+        private string PlaceUniforms(IEnumerable<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)> systemMethods)
+        {
+            var sb = new StringBuilder();
+            foreach (var (method, _, includeDisabled, changedOnly) in systemMethods)
+            {
+                var parameters = method.Parameters;
+
+                // void (in Uniform, ref C1, ref C2, ref C3...)
+                if (method.Parameters[0].Type.IsValueType
+                    && method.Parameters[0].RefKind == RefKind.In
+                    && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref)) {
+                    sb.AppendLine($"private {method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {method.Name}Uniform_{method.GetHashCode()};");
+                    continue;
+                }
+
+                // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
+                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
+                    && method.Parameters[0].RefKind == RefKind.In
+                    && method.Parameters[1].Type.IsValueType
+                    && method.Parameters[1].RefKind == RefKind.In
+                    && method.Parameters[1].HasUniformAttributes()
+                    && method.Parameters.Skip(2).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
+                {
+                    sb.AppendLine($"private {method.Parameters[1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {method.Name}Uniform_{method.GetHashCode()};");
+                }
+
+                // INVALID SIGNATURE!
+            }
+            return sb.ToString();
+        }
+
 
         private string PlaceDelegates(IEnumerable<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)> systemMethods)
         {
@@ -197,8 +232,11 @@ namespace {ns}
                 }
                 
                 // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default) && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters[1].Type.IsValueType && method.Parameters[1].RefKind == RefKind.In
+                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
+                    && method.Parameters[0].RefKind == RefKind.In
+                    && method.Parameters[1].Type.IsValueType
+                    && method.Parameters[1].RefKind == RefKind.In
+                    && method.Parameters[1].HasUniformAttributes()
                     && method.Parameters.Skip(2).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
                 {
                     var typeListFormatted = string.Join(", ", parameters.Skip(1).Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
@@ -230,6 +268,11 @@ namespace {ns}
     
     internal static class RefKindExtensions
     {
+        internal static bool HasUniformAttributes(this IParameterSymbol parameter) {
+            var attributes = parameter.GetAttributes();
+            return attributes.Any(a => a.AttributeClass.Name == "UniformAttribute" || a.AttributeClass.Name == "ComponentAttribute");
+        }
+
         internal static string ToParameterPrefix(this RefKind kind)
         {
             switch (kind)

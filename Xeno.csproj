@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
         <Nullable>disable</Nullable>
         <RootNamespace>Xeno</RootNamespace>
         <ImplicitUsings>false</ImplicitUsings>
@@ -8,7 +9,7 @@
         <AssemblyName>Xeno</AssemblyName>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.1.1</PackageVersion>
+        <PackageVersion>0.1.6</PackageVersion>
         <Title>General purpose ECS</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides bare bones ECS to get basic stuff.</Description>
@@ -16,7 +17,6 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageTags>ecs dotnet unity</PackageTags>
-        <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
         <PackageProjectUrl>https://github.com/blackbone/xeno</PackageProjectUrl>
         <PackageIcon>xeno.png</PackageIcon>
         <RepositoryUrl>https://github.com/blackbone/xeno</RepositoryUrl>
@@ -28,6 +28,7 @@
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <DebugType>full</DebugType>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

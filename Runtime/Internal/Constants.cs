@@ -1,16 +1,17 @@
 namespace Xeno
 {
     internal static class Constants {
-        internal const int INT_DIVIDER = 5;
-        internal const uint INT_SIZE = 1u << INT_DIVIDER;
-        internal const int INT_DIVISION_MASK = (1 << (INT_DIVIDER + 1)) - 1;
-
+        // for bit operation
         internal const int LONG_DIVIDER = 6;
-        internal const uint LONG_SIZE = 1u << LONG_DIVIDER;
-        internal const int LONG_DIVISION_MASK = (1 << (LONG_DIVIDER + 1)) - 1;
+        internal const int LONG_DIVISION_MASK = 0b111111;
+        public const int LongBitSize = 64;
 
-        public const int DefaultStep = 4;
-        public const int DefaultCapacity = 0;
-        public const int DefaultCapacityGrow = 32;
+        // entities and archetypes
+        public const int PreInitializedArchetypesCount = 16;
+        public const int DefaultEntityCount = 1024 * 16; // 16k will be enough for most games
+        public const int DefaultArchetypeEntityCount = 1024;
+        public const int MaxArchetypeComponents = 1024;
+        public const int DefaultComponentTypesCount = 128;
+        public const int InitialComponentsCapacity = 128;
     }
 }
