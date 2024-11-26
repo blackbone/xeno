@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <RootNamespace>Xeno.SourceGenerator.SampleECS</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Xeno.csproj" />
+      <ProjectReference Include="..\ECS.Feature1\ECS.Feature1.csproj" />
+      <ProjectReference Include="..\ECS.Feature2\ECS.Feature2.csproj" />
+    </ItemGroup>
+
+</Project>

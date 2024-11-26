@@ -47,8 +47,5 @@
         <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
     </ItemGroup>
 
-    <ItemGroup>
-    </ItemGroup>
-
 
 </Project>
