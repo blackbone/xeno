@@ -1,5 +1,5 @@
 namespace ECS.Feature2 {
-    public class Feature2System {
+    public class Feature2SystemGroup {
         
     }
 }

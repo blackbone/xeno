@@ -7,7 +7,7 @@ using Xeno;
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
 namespace Xeno {
-    public sealed partial class World { // this part class is work with component data, not more or less
+    public sealed partial class World_Old { // this part class is work with component data, not more or less
         internal Store[] stores;
         private uint storeCapacity;
 
@@ -227,7 +227,7 @@ namespace Xeno {
             if (s == null) return;
 
             var d1 = s.sparse[entityId];
-            if (d1 > s.count) return;
+            if (d1 >= s.count) return;
 
             var sp = s.dense.At(d1);
             if (sp != entityId) return;

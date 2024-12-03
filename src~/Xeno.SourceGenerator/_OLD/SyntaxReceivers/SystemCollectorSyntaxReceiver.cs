@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Xeno.SourceGenerator.Utils;
+
 
 namespace Xeno.SourceGenerator.SyntaxReceivers;
 

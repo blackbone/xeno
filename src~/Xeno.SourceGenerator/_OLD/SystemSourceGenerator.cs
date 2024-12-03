@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Xeno.SourceGenerator.Utils;
+
 
 namespace Xeno.SourceGenerator
 {
@@ -21,12 +21,16 @@ namespace Xeno.SourceGenerator
 
         public void Initialize(GeneratorInitializationContext context)
         {
+            return;
+
             // Register a syntax receiver that will be created for each compilation
             context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
         }
 
         public void Execute(GeneratorExecutionContext context)
         {
+            return;
+
             // Retrieve the populated instance of the syntax receiver
             if (!(context.SyntaxReceiver is SyntaxReceiver receiver))
                 return;

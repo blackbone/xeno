@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Xeno {
-    public sealed partial class World {
+    public sealed partial class World_Old {
         // this part of file is about creating entities
         private const uint AllocatedMask = 0b10000000_00000000_00000000_00000000U;
         private const uint NonAllocationMask = ~AllocatedMask;
@@ -14,9 +13,9 @@ namespace Xeno {
         private uint[] freeIds;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsEntityValid_Internal(in Entity entity) {
-            if (entity.WorldId != Id) return false;
-            return entities[entity.Id].Version == entity.Version;
+        private bool IsEntityValid_Internal(in Entity_Old entityOld) {
+            if (entityOld.WorldId != Id) return false;
+            return entities[entityOld.Id].Version == entityOld.Version;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,7 +52,7 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CreateEntity_Internal(out Entity entity) {
+        private void CreateEntity_Internal(out Entity_Old entityOld) {
             var e_id = entityCount;
             if (freeIdsCount > 0) {
                 freeIdsCount--;
@@ -61,13 +60,13 @@ namespace Xeno {
             }
 
             entities[e_id].Version |= AllocatedMask;
-            entity = Unsafe.As<RWEntity, Entity>(ref entities[e_id]);
+            entityOld = Unsafe.As<RWEntity, Entity_Old>(ref entities[e_id]);
             entityCount++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteEntity_Internal(in Entity entity) {
-            ref var e = ref entities[entity.Id];
+        private void DeleteEntity_Internal(in Entity_Old entityOld) {
+            ref var e = ref entities[entityOld.Id];
             e.Version &= NonAllocationMask;
             e.Version++;
             entityCount--;

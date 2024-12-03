@@ -31,7 +31,7 @@ namespace Xeno {
             set.data.CopyTo(data);
             indexJoin = set.indexJoin;
 
-            Span<uint> buffer = stackalloc uint[Constants.MaxArchetypeComponents];
+            Span<uint> buffer = stackalloc uint[Constants.MaxArchetypeComponentsMaskSize];
             set.GetIndices(ref buffer, out var count);
             indices = buffer[..count].ToArray();
         }

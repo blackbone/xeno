@@ -5,7 +5,7 @@ namespace Xeno
     [Serializable]
     public abstract class System
     {
-        protected World world;
+        protected World_Old WorldOld;
 
         protected internal abstract bool IsWorldStartSystem { get; }
         protected internal abstract bool IsPreUpdateSystem { get; }
@@ -19,16 +19,16 @@ namespace Xeno
         protected internal abstract void PostUpdate(in float delta);
         protected internal abstract void Stop();
 
-        internal void AttachToWorld(in World worldToAttach)
+        internal void AttachToWorld(in World_Old worldOldToAttach)
         {
-            if (world != null) throw new InvalidOperationException("Trying attach system instance to more than one world!");
-            world = worldToAttach;
+            if (WorldOld != null) throw new InvalidOperationException("Trying attach system instance to more than one world!");
+            WorldOld = worldOldToAttach;
         }
 
-        internal void DetachFromWorld(in World worldToAttach)
+        internal void DetachFromWorld(in World_Old worldOldToAttach)
         {
-            if (world != worldToAttach) throw new InvalidOperationException("Trying detach system instance from world it not belongs to!");
-            world = null;
+            if (WorldOld != worldOldToAttach) throw new InvalidOperationException("Trying detach system instance from world it not belongs to!");
+            WorldOld = null;
         }
     }
 }

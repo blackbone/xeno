@@ -1,12 +1,12 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Xeno.SourceGenerator.Utils;
+namespace Xeno.SourceGenerator;
 
 public static class MurMur
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Hash32(ReadOnlySpan<byte> bytes, uint seed)
+    public static uint Hash32(ReadOnlySpan<byte> bytes, uint seed = 0)
     {
         var length = bytes.Length;
         var h1 = seed;

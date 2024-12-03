@@ -1,8 +1,7 @@
 using System.Runtime.CompilerServices;
-using Xeno;
 
 namespace Xeno {
-    public sealed partial class World { // this part of class is about archetype management and
+    public sealed partial class World_Old { // this part of class is about archetype management and
         internal Archetypes archetypes; // archetypes reorderable linked list
         internal Archetype zeroArchetype;
 

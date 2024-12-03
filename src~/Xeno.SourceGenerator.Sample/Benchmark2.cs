@@ -8,8 +8,8 @@
 // {
 //     [SystemMethod(SystemMethodType.Update)]
 //     public static void Update(
-//         ref XenoBaseContext.Component1 component1,
-//         ref XenoBaseContext.Component2 component2)
+//         ref XenoBaseinfo.Context.Component1 component1,
+//         ref XenoBaseinfo.Context.Component2 component2)
 //     {
 //         component1.Value += component2.Value;
 //     }
@@ -66,4 +66,3 @@
 //         return this;
 //     }
 // }
-

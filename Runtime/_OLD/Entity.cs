@@ -6,7 +6,7 @@ namespace Xeno
     /// Entity representation struct. 9 bytes only.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public readonly partial struct Entity
+    public readonly partial struct Entity_Old
     {
         internal readonly uint Id;
         internal readonly uint Version;

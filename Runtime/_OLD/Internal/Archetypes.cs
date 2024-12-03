@@ -4,18 +4,18 @@ using System.Text;
 
 namespace Xeno {
     internal sealed class Archetypes {
-        internal readonly World world;
+        internal readonly World_Old WorldOld;
         internal Archetype[] freeArchetypes;
         internal int freeArchetypesCount;
         internal Archetype head;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Archetypes(World world) {
-            this.world = world;
+        public Archetypes(World_Old worldOld) {
+            this.WorldOld = worldOld;
             freeArchetypes = new Archetype[Constants.PreInitializedArchetypesCount];
             freeArchetypesCount = Constants.PreInitializedArchetypesCount;
             for (var i = 0; i < freeArchetypesCount; i++)
-                freeArchetypes[i] = new Archetype(true, world);
+                freeArchetypes[i] = new Archetype(true, worldOld);
 
             head = null;
         }
@@ -38,7 +38,7 @@ namespace Xeno {
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Archetype AddPermanent(this Archetypes archetypes, ref BitSetReadOnly mask) {
-            var node = new Archetype(false, archetypes.world) {
+            var node = new Archetype(false, archetypes.WorldOld) {
                 mask = mask,
                 next = archetypes.head
             };
@@ -62,7 +62,7 @@ namespace Xeno {
             if (v == null) {
                 v = archetypes.freeArchetypesCount > 0
                     ? archetypes.freeArchetypes[--archetypes.freeArchetypesCount]
-                    : new Archetype(true, archetypes.world);
+                    : new Archetype(true, archetypes.WorldOld);
                 v.mask = mask.AsReadOnly();
             }
 
@@ -110,7 +110,7 @@ namespace Xeno {
             if (v == null) {
                 v = archetypes.freeArchetypesCount > 0
                     ? archetypes.freeArchetypes[--archetypes.freeArchetypesCount]
-                    : new Archetype(true, archetypes.world);
+                    : new Archetype(true, archetypes.WorldOld);
                 v.mask = mask;
             }
 

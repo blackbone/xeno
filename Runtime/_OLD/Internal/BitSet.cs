@@ -1,9 +1,7 @@
 using System;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Xeno.Vendor;
 
 namespace Xeno
 {
@@ -45,12 +43,6 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref BitSet Set(this ref BitSet set, int index) {
             set.data[index >> Constants.LONG_DIVIDER] |= 1ul << (index & Constants.LONG_DIVISION_MASK);
-            return ref set;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref BitSet Unset(this ref BitSet set, int index) {
-            set.data[index >> Constants.LONG_DIVIDER] &= ~(1ul << (index & Constants.LONG_DIVISION_MASK));
             return ref set;
         }
 
@@ -310,6 +302,24 @@ namespace Xeno
                 }
             }
             count = n;
+        }
+
+        internal static uint[] GetIndices(this in BitSet set) {
+            Span<uint> values = stackalloc uint[Constants.MaxArchetypeComponentsMaskSize];
+            var n = 0;
+            var l = set.data.Length;
+            uint u_i = 0;
+            for (var i = 0; i < l; i++, u_i++) {
+                var v = set.data[i];
+
+                var k = 0u;
+                while (v != 0) {
+                    if ((v & 1ul) == 1ul) values[n++] = u_i * Constants.LongBitSize + k;
+                    v >>= 1;
+                    k++;
+                }
+            }
+            return values[..n].ToArray();
         }
 
         internal static string ToS(this ref BitSet bitSet) => ToS(bitSet.data);

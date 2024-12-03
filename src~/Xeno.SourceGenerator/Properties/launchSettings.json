@@ -3,7 +3,7 @@
   "profiles": {
     "DebugRoslynSourceGenerator": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "../Xeno.SourceGenerator.Sample/Xeno.SourceGenerator.Sample.csproj"
+      "targetProject": "../ECS.Impl/ECS.Impl.csproj"
     }
   }
 }

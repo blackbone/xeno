@@ -4,17 +4,17 @@ using Xeno;
 
 namespace Xeno {
     [DebuggerTypeProxy(typeof(World_Debug))]
-    public sealed partial class World {
+    public sealed partial class World_Old {
         internal class World_Debug {
-            private readonly World _world;
-            public World_Debug(World world) => _world = world;
+            private readonly World_Old _worldOld;
+            public World_Debug(World_Old worldOld) => _worldOld = worldOld;
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
             public Entity_Debug[] Entities {
                 get {
-                    var entities = new Entity_Debug[_world.entityCount];
+                    var entities = new Entity_Debug[_worldOld.entityCount];
                     int i = 0;
-                    foreach (var e in _world.entities) {
+                    foreach (var e in _worldOld.entities) {
                         if ((e.Version & AllocatedMask) == 0) continue;
                         entities[i] = new Entity_Debug(e);
                     }
@@ -26,7 +26,7 @@ namespace Xeno {
             public List<Archetype> Archetypes {
                 get {
                     var list = new List<Archetype>();
-                    var v = _world.archetypes.head;
+                    var v = _worldOld.archetypes.head;
                     while (v != null) {
                         list.Add(v);
                         v = v.next;
@@ -39,10 +39,10 @@ namespace Xeno {
             public List<Store> Stores {
                 get {
                     var list = new List<Store>();
-                    for (int i = 0; i < _world.stores.Length; i++) {
-                        if (_world.stores[i] == null) continue;
+                    for (int i = 0; i < _worldOld.stores.Length; i++) {
+                        if (_worldOld.stores[i] == null) continue;
 
-                        list.Add(_world.stores[i]);
+                        list.Add(_worldOld.stores[i]);
                     }
                     return list;
                 }

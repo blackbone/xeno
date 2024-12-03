@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Xeno.SourceGenerator.SyntaxReceivers;
-using Xeno.SourceGenerator.Utils;
+
 
 namespace Xeno.SourceGenerator;
 

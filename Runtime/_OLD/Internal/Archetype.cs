@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Xeno {
     internal sealed partial class Archetype {
-        public readonly World world;
+        public readonly World_Old WorldOld;
         public readonly bool floating;
         public BitSetReadOnly mask;
 
@@ -12,8 +12,8 @@ namespace Xeno {
         public Archetype prev;
         public Archetype next;
 
-        public Archetype(in bool floating, in World world) {
-            this.world = world;
+        public Archetype(in bool floating, in World_Old worldOld) {
+            this.WorldOld = worldOld;
             this.floating = floating;
             entities = new uint[Constants.DefaultArchetypeEntityCount];
             entitiesCount = 0;

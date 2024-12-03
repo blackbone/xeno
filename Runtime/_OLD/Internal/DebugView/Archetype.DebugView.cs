@@ -7,11 +7,11 @@ namespace Xeno {
     internal partial class Archetype {
         public class Archetype_DebugView {
             private readonly Archetype _archetype;
-            private readonly World _world;
+            private readonly World_Old _worldOld;
 
             public Archetype_DebugView(Archetype archetype) {
                 _archetype = archetype;
-                _world = _archetype.world;
+                _worldOld = _archetype.WorldOld;
             }
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
@@ -22,7 +22,7 @@ namespace Xeno {
                 get {
                     var result = new RWEntity[EntitiesCount];
                     for (int i = 0; i < _archetype.entitiesCount; i++) {
-                        result[i] = _world.entities[_archetype.entities[i]];
+                        result[i] = _worldOld.entities[_archetype.entities[i]];
                     }
                     return result;
                 }
@@ -35,7 +35,7 @@ namespace Xeno {
             public List<Store> Stores {
                 get {
                     var result = new List<Store>();
-                    result.AddRange(_archetype.mask.GetIndices().Select(i => _world.stores[i]));
+                    result.AddRange(_archetype.mask.GetIndices().Select(i => _worldOld.stores[i]));
                     return result;
                 }
             }

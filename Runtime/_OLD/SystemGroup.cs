@@ -7,7 +7,7 @@ namespace Xeno
     {
         private readonly string friendlyName;
         private readonly LinkedList<System> systems = new();
-        private World world;
+        private World_Old _worldOld;
         
         private event Action started;
         private event UpdateDelegate preUpdate; 
@@ -20,50 +20,50 @@ namespace Xeno
             this.friendlyName = friendlyName;
         }
         
-        internal void AttachToWorld(in World world)
+        internal void AttachToWorld(in World_Old worldOld)
         {
-            if (this.world != null) throw new InvalidOperationException("Trying attach system instance to more than one world!");
+            if (this._worldOld != null) throw new InvalidOperationException("Trying attach system instance to more than one world!");
             
-            this.world = world;
+            this._worldOld = worldOld;
             
             if (systems.Count > 0)
             {
                 var current = systems.First;
                 do
                 {
-                    current.Value.AttachToWorld(world);
+                    current.Value.AttachToWorld(worldOld);
                     current = current.Next;
                 } while (current != null);
             }
             
-            world.Started += Start;
-            world.PreUpdate += PreUpdate;
-            world.Update += Update;
-            world.PostUpdate += PostUpdate;
-            world.Stopped += Stop;
+            worldOld.Started += Start;
+            worldOld.PreUpdate += PreUpdate;
+            worldOld.Update += Update;
+            worldOld.PostUpdate += PostUpdate;
+            worldOld.Stopped += Stop;
         }
 
-        internal void DetachFromWorld(in World world)
+        internal void DetachFromWorld(in World_Old worldOld)
         {
-            if (this.world != world) throw new InvalidOperationException("Trying detach system instance from world it not belongs to!");
+            if (this._worldOld != worldOld) throw new InvalidOperationException("Trying detach system instance from world it not belongs to!");
             
-            world.Started -= Start;
-            world.PreUpdate -= PreUpdate;
-            world.Update -= Update;
-            world.PostUpdate -= PostUpdate;
-            world.Stopped -= Stop;
+            worldOld.Started -= Start;
+            worldOld.PreUpdate -= PreUpdate;
+            worldOld.Update -= Update;
+            worldOld.PostUpdate -= PostUpdate;
+            worldOld.Stopped -= Stop;
             
             if (systems.Count > 0)
             {
                 var current = systems.Last;
                 do
                 {
-                    current.Value.DetachFromWorld(world);
+                    current.Value.DetachFromWorld(worldOld);
                     current = current.Previous;
                 } while (current != null);
             }
             
-            this.world = null;
+            this._worldOld = null;
         }
         
         public void AddSystem(in System system)

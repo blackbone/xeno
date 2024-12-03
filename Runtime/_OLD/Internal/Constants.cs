@@ -11,6 +11,7 @@ namespace Xeno
         public const int DefaultEntityCount = 1024 * 16; // 16k will be enough for most games
         public const int DefaultArchetypeEntityCount = 1024;
         public const int MaxArchetypeComponents = 1024;
+        public const int MaxArchetypeComponentsMaskSize = 1024 / LongBitSize;
         public const int DefaultComponentTypesCount = 128;
         public const int InitialComponentsCapacity = 128;
     }

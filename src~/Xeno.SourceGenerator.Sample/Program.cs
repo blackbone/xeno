@@ -1,17 +1,11 @@
-using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Reflection;
+
 using System.Runtime.InteropServices;
-using System.Threading;
-using Xeno;
-using Xeno.SourceGenerator.Sample;
-using IComponent = Xeno.IComponent;
+using ECS.Impl;
 
 namespace SourceGenerator.Sample;
 
 [Guid("C060D394-C1A0-45F1-8531-0823C72C9978")]
-public struct Position : IComponent
+public struct Position
 {
     public float x;
     public float y;
@@ -19,21 +13,21 @@ public struct Position : IComponent
 }
 
 [Guid("859EBA51-B55C-41B0-86CD-F26E09542DA0")]
-public struct Velocity : IComponent
+public struct Velocity
 {
     public float x;
     public float y;
     public float z;
 }
 
-public struct Rotation : IComponent
+public struct Rotation
 {
     public float x;
     public float y;
     public float z;
 }
 
-public struct AngularVelocity : IComponent
+public struct AngularVelocity
 {
     public float x;
     public float y;
@@ -42,27 +36,12 @@ public struct AngularVelocity : IComponent
 
 public class Program
 {
-    public static void Main(string[] args)
-    {
-            // Console.WriteLine(typeof(Filter.IncludeDisabledAttribute).FullName);
-            // Console.WriteLine(typeof(Filter.ChangedOnlyAttribute).FullName);
-            // // Console.WriteLine(Marshal.SizeOf<Chunk>());
-            // Console.WriteLine(Marshal.SizeOf<int>());
+    public static void Main(string[] args) {
+        var world = new World("", 412);
 
-            // var chunk = new Chunk(Component<Position>.Info);
+        var e1 = world.Create();
+        var e2 = world.Create();
 
-            // Test<byte>();
-            // Test<short>();
-            // Test<int>();
-            // Test<long>();
-            // Test<float>();
-            // Test<Position>();
-
-            new WorldTests().Run();
-            new PerfTest().Run();
-
-            // new Benchmark1(100_000, 20).Run(1_000).Dispose();
-            // new Benchmark2(100_000, 20).Run(1_000).Dispose();
-            // new Benchmark3(100_000, 20).Run(1_000).Dispose();
+        world.Dispose();
     }
 }

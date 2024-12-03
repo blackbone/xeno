@@ -3,9 +3,9 @@ using System.Runtime.CompilerServices;
 using Xeno;
 
 namespace Xeno {
-    public sealed partial class World {
+    public sealed partial class World_Old {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal World(string name, ushort id)
+        internal World_Old(string name, ushort id)
         {
             Name = name;
             Id = id;

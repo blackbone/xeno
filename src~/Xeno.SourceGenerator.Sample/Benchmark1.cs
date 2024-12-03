@@ -8,7 +8,7 @@
 // {
 //     
 //     [SystemMethod(SystemMethodType.Update)]
-//     private static void Update(ref XenoBaseContext.Component1 component1) => component1.Value++;
+//     private static void Update(ref XenoBaseinfo.Context.Component1 component1) => component1.Value++;
 // }
 //
 // public class Benchmark1 : XenoBaseContext
@@ -51,4 +51,3 @@
 //         return this;
 //     }
 // }
-

@@ -9,9 +9,9 @@
 //     
 //     [SystemMethod(SystemMethodType.Update)]
 //     private static void Update(
-//         ref XenoBaseContext.Component1 component1,
-//         ref XenoBaseContext.Component2 component2,
-//         ref XenoBaseContext.Component3 component3)
+//         ref XenoBaseinfo.Context.Component1 component1,
+//         ref XenoBaseinfo.Context.Component2 component2,
+//         ref XenoBaseinfo.Context.Component3 component3)
 //     {
 //         component1.Value += component2.Value + component3.Value;
 //     }
@@ -73,4 +73,3 @@
 //         return this;
 //     }
 // }
-

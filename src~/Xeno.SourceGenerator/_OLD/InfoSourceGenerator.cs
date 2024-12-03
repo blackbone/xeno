@@ -11,6 +11,7 @@ public class InfoSourceGenerator : ISourceGenerator
 {
     public void Initialize(GeneratorInitializationContext context)
     {
+        return;
         context.RegisterForSyntaxNotifications(() => new CompositeSyntaxReceiver<
             ComponentCollectorSyntaxReceiver,
             SystemCollectorSyntaxReceiver>());
@@ -18,6 +19,8 @@ public class InfoSourceGenerator : ISourceGenerator
 
     public void Execute(GeneratorExecutionContext context)
     {
+        return;
+
         var receiver = context.SyntaxReceiver as CompositeSyntaxReceiver<
             ComponentCollectorSyntaxReceiver,
             SystemCollectorSyntaxReceiver>;
