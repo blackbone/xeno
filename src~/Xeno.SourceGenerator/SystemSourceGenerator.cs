@@ -9,15 +9,11 @@ namespace Xeno.SourceGenerator
     [Generator]
     public partial class SystemSourceGenerator : ISourceGenerator
     {
-        private INamedTypeSymbol componentInterfaceType;
-        private INamedTypeSymbol entityType;
-        private INamedTypeSymbol deltaType;
-        public INamedTypeSymbol deltaAttributeType;
-        public INamedTypeSymbol useAttributeType;
-        private INamedTypeSymbol systemAttributeType;
-        private INamedTypeSymbol systemMethodAttributeType;
-        private INamedTypeSymbol includeDisabledAttributeType;
-        private INamedTypeSymbol changedOnlyAttributeType;
+        internal static INamedTypeSymbol componentInterfaceType;
+        internal static INamedTypeSymbol entityType;
+        internal static INamedTypeSymbol systemAttributeType;
+        internal static INamedTypeSymbol systemMethodAttributeType;
+        internal static INamedTypeSymbol uniformAttributeType;
 
         public void Initialize(GeneratorInitializationContext context)
         {
@@ -35,16 +31,12 @@ namespace Xeno.SourceGenerator
             var compilation = context.Compilation;
 
             // Find the type symbol for Xeno.UpdateSystem
-            if (!Ensure.Type(compilation, "System.Single", out deltaType)) return;
             if (!Ensure.Type(compilation, "Xeno.Entity", out entityType)) return;
             if (!Ensure.Type(compilation, "Xeno.IComponent", out componentInterfaceType)) return;
             if (!Ensure.Type(compilation, "Xeno.SystemAttribute", out systemAttributeType)) return;
-            if (!Ensure.Type(compilation, "Xeno.DeltaAttribute", out deltaAttributeType)) return;
-            if (!Ensure.Type(compilation, "Xeno.UseAttribute", out useAttributeType)) return;
             if (!Ensure.Type(compilation, "Xeno.SystemMethodAttribute", out systemMethodAttributeType)) return;
-            if (!Ensure.Type(compilation, "Xeno.Filter+IncludeDisabledAttribute", out includeDisabledAttributeType)) return;
-            if (!Ensure.Type(compilation, "Xeno.Filter+ChangedOnlyAttribute", out changedOnlyAttributeType)) return;
-            
+            if (!Ensure.Type(compilation, "Xeno.UniformAttribute", out uniformAttributeType)) return;
+
             foreach (var classSyntax in receiver.CandidateClasses)
             {
                 var classSemanticModel = compilation.GetSemanticModel(classSyntax.SyntaxTree);
@@ -57,7 +49,7 @@ namespace Xeno.SourceGenerator
                 if (classAttributes.All(a => !(a.AttributeClass?.Equals(systemAttributeType, SymbolEqualityComparer.Default) ?? false)))
                     continue;
 
-                var systemMethods = new Dictionary<int, List<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)>>();
+                var systemMethods = new Dictionary<int, List<(IMethodSymbol method, int order)>>();
                 foreach (var member in classSymbol.GetMembers())
                 {
                     if (member is not IMethodSymbol method) continue;
@@ -67,9 +59,6 @@ namespace Xeno.SourceGenerator
                     
                     var systemMethodAttribute = attributes.FirstOrDefault(attribute => attribute.AttributeClass?.Equals(systemMethodAttributeType, SymbolEqualityComparer.Default) ?? false);
                     if (systemMethodAttribute == null) continue;
-                    
-                    var includeDisabledAttribute = attributes.FirstOrDefault(attribute => attribute.AttributeClass?.Equals(includeDisabledAttributeType, SymbolEqualityComparer.Default) ?? false);
-                    var changedOnlyAttribute = attributes.FirstOrDefault(attribute => attribute.AttributeClass?.Equals(changedOnlyAttributeType, SymbolEqualityComparer.Default) ?? false);
 
                     if (systemMethodAttribute.ConstructorArguments.Length == 0) continue;
                     if (systemMethodAttribute.ConstructorArguments[0].Value == null) continue;
@@ -77,10 +66,10 @@ namespace Xeno.SourceGenerator
                     
                     var invocationGroup = (int)systemMethodAttribute.ConstructorArguments[0].Value;
                     if (!systemMethods.TryGetValue(invocationGroup, out var list))
-                        list = systemMethods[invocationGroup] = new List<(IMethodSymbol, int, bool, bool)>();
+                        list = systemMethods[invocationGroup] = new List<(IMethodSymbol, int)>();
                     
                     var order = (int)systemMethodAttribute.ConstructorArguments[1].Value;
-                    list.Add((method, order, includeDisabledAttribute != null, changedOnlyAttribute != null));
+                    list.Add((method, order));
                 }
                 
                 var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();

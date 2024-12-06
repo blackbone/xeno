@@ -1,4 +1,4 @@
-using Xeno;
+using System;
 // ReSharper disable StaticMemberInGenericType
 
 namespace Xeno
@@ -14,14 +14,13 @@ namespace Xeno
     /// <typeparam name="T"></typeparam>
     internal static class CI<T>
     {
-        public static readonly T Default = default;
+        public static T Default = default;
         public static readonly int Index = ComponentInfo.Index++;
 
         public static BitSetReadOnly Mask;
         static CI() {
-            var maskSize = BitSet.MaskSize(Index);
-            var set = new BitSet(stackalloc ulong[maskSize]) {
-                indexJoin = Index
+            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Index)]) {
+                max = Index
             };
             set.Set(Index).FinalizeHash();
             Mask = set.AsReadOnly();
@@ -29,13 +28,12 @@ namespace Xeno
     }
 
     internal static class CI<T1, T2> {
+        internal static readonly int Max = Math.Max(CI<T1>.Index, CI<T2>.Index);
         public static BitSetReadOnly Mask;
 
         static CI() {
-            var indexJoin = CI<T1>.Index | CI<T2>.Index;
-            var maskSize = BitSet.MaskSize(indexJoin);
-            var set = new BitSet(stackalloc ulong[maskSize]) {
-                indexJoin = indexJoin
+            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Max)]) {
+                max = Max
             };
             set.Set(CI<T1>.Index).Set(CI<T2>.Index).FinalizeHash();
             Mask = set.AsReadOnly();
@@ -43,13 +41,12 @@ namespace Xeno
     }
 
     internal static class CI<T1, T2, T3> {
+        private static readonly int Max = Math.Max(CI<T1, T2>.Max, CI<T3>.Index);
         public static BitSetReadOnly Mask;
 
         static CI() {
-            var indexJoin = CI<T1>.Index | CI<T2>.Index | CI<T3>.Index;
-            var maskSize = BitSet.MaskSize(indexJoin);
-            var set = new BitSet(stackalloc ulong[maskSize]) {
-                indexJoin = indexJoin
+            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Max)]) {
+                max = Max
             };
             set.Set(CI<T1>.Index).Set(CI<T2>.Index).Set(CI<T3>.Index).FinalizeHash();
             Mask = set.AsReadOnly();
@@ -57,12 +54,11 @@ namespace Xeno
     }
 
     internal static class CI<T1, T2, T3, T4> {
+        private static readonly int Max = Math.Max(CI<T1, T2>.Max, CI<T3, T4>.Max);
         public static BitSetReadOnly Mask;
         static CI() {
-            var indexJoin = CI<T1>.Index | CI<T2>.Index | CI<T3>.Index | CI<T4>.Index;
-            var maskSize = BitSet.MaskSize(indexJoin);
-            var set = new BitSet(stackalloc ulong[maskSize]) {
-                indexJoin = indexJoin
+            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Max)]) {
+                max = Max
             };
             set.Set(CI<T1>.Index).Set(CI<T2>.Index).Set(CI<T3>.Index).Set(CI<T4>.Index).FinalizeHash();
             Mask = set.AsReadOnly();

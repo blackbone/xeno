@@ -7,20 +7,20 @@ using System.Text;
 
 namespace Xeno {
     [StructLayout(LayoutKind.Sequential)]
-    internal  readonly struct BitSetReadOnly {
+    internal  readonly struct BitSetReadOnly : IEquatable<BitSetReadOnly> {
         private static readonly ulong[] emptyUlong = { 0 };
         private static readonly uint[] emptyUInt = { };
 
         public static BitSetReadOnly Zero = new(0);
 
-        public readonly int indexJoin;
+        public readonly int max;
         public readonly ulong hash;
         public readonly ulong[] data;
         public readonly uint[] indices;
 
         private BitSetReadOnly(int _) {
             hash = 0;
-            indexJoin = 0;
+            max = 0;
             data = emptyUlong;
             indices = emptyUInt;
         }
@@ -29,17 +29,26 @@ namespace Xeno {
             hash = set.hash;
             data = new ulong[set.data.Length];
             set.data.CopyTo(data);
-            indexJoin = set.indexJoin;
+            max = set.max;
 
             Span<uint> buffer = stackalloc uint[Constants.MaxArchetypeComponents];
             set.GetIndices(ref buffer, out var count);
             indices = buffer[..count].ToArray();
         }
 
+        public bool Equals(BitSetReadOnly other) => max == other.max && hash == other.hash;
+        public bool Equals(BitSet other) => max == other.max && hash == other.hash;
+        public override bool Equals(object obj) => obj is BitSetReadOnly other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(max, hash);
         public override string ToString() => $"{BitSetExtensions.ToS(data)}";
     }
 
     internal static class BitSetReadOnlyExtensions {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Get(this ref BitSetReadOnly set, int index) {
+            return (set.data[index >> Constants.LONG_DIVIDER] & 1ul << (index & Constants.LONG_DIVISION_MASK)) != 0;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool Includes(this ref BitSetReadOnly set, ref BitSetReadOnly other) {
             if (set.hash == other.hash) return true;
@@ -47,7 +56,7 @@ namespace Xeno {
 
             for (var i = 0; i < other.data.Length; i++)
             {
-                if ((set.data.At(i) & other.data.At(i)) != other.data.At(i))
+                if ((set.data[i] & other.data[i]) != other.data[i])
                     return false;
             }
 

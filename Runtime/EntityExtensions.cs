@@ -98,7 +98,7 @@ namespace Xeno
             where T1 : struct, IComponent
         {
             if (!Worlds.TryGet(entity.WorldId, out var world)) return false;
-            return world.RefComponents(entity, ref component1);
+            return world.RefComponent(entity, ref component1);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

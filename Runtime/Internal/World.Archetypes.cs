@@ -44,8 +44,11 @@ namespace Xeno {
         {
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1>.Mask.indexJoin | fromMask.indexJoin)]);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1>.Mask.max, fromMask.max)]);
             mask.FromAdd(fromMask, CI<T1>.Mask);
+
+            // archetype not changed
+            if (fromArchetype.mask.Equals(mask)) return;
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);
             archetypes.Add(ref mask, entityId, out fromArchetype, out inArchetypeLocalIndices[entityId]);
@@ -56,7 +59,7 @@ namespace Xeno {
         {
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2>.Mask.indexJoin | fromMask.indexJoin)]);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2>.Mask.max, fromMask.max)]);
             mask.FromAdd(fromMask, CI<T1, T2>.Mask);
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);
@@ -68,7 +71,7 @@ namespace Xeno {
         {
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3>.Mask.indexJoin | fromMask.indexJoin)]);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3>.Mask.max, fromMask.max)]);
             mask.FromAdd(fromMask, CI<T1, T2, T3>.Mask);
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);
@@ -80,7 +83,7 @@ namespace Xeno {
         {
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3, T4>.Mask.indexJoin | fromMask.indexJoin)]);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3, T4>.Mask.max, fromMask.max)]);
             mask.FromAdd(fromMask, CI<T1, T2, T3, T4>.Mask);
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);
@@ -91,11 +94,10 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ChangeArchetypeRemove_Internal<T1>(in uint entityId)
         {
-            var removeMask = CI<T1>.Mask;
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(removeMask.indexJoin | fromMask.indexJoin)]);
-            mask.FromRemove(fromMask, removeMask);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1>.Mask.max, fromMask.max)]);
+            mask.FromRemove(fromMask, CI<T1>.Mask);
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);
             archetypes.Add(ref mask, entityId, out fromArchetype, out inArchetypeLocalIndices[entityId]);
@@ -106,7 +108,7 @@ namespace Xeno {
         {
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2>.Mask.indexJoin | fromMask.indexJoin)]);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2>.Mask.max, fromMask.max)]);
             mask.FromRemove(fromMask, CI<T1, T2>.Mask);
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);
@@ -118,7 +120,7 @@ namespace Xeno {
         {
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3>.Mask.indexJoin | fromMask.indexJoin)]);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3>.Mask.max, CI<T1>.Index)]);
             mask.FromRemove(fromMask, CI<T1, T2, T3>.Mask);
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);
@@ -130,7 +132,7 @@ namespace Xeno {
         {
             ref var fromArchetype = ref entityArchetypes[entityId];
             ref var fromMask = ref fromArchetype.mask;
-            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3, T4>.Mask.indexJoin | fromMask.indexJoin)]);
+            var mask = new BitSet(stackalloc ulong[BitSet.MaskSize(CI<T1, T2, T3, T4>.Mask.max, fromMask.max)]);
             mask.FromRemove(fromMask, CI<T1, T2, T3, T4>.Mask);
 
             archetypes.Remove(fromArchetype, entityId, inArchetypeLocalIndices);

@@ -11,33 +11,25 @@ namespace Xeno.SourceGenerator.Sample
             const int entityCount = 1000000;
             const int entityPadding = 10;
 
-            for (var i = 0; i < entityPadding; i++)
+            var world = Worlds.GetOrCreate("sample world");
+            world.AddSystem(new TestSystem());
+
+            for (var j = 0; j < entityCount; ++j)
             {
-                var world = Worlds.GetOrCreate("sample world");
-                // world.AddSystem(new TestSystem());
+                for (var k = 0; k < entityPadding; ++k)
+                    world.CreateEntity();
 
-                for (var j = 0; j < entityCount; ++j)
-                {
-                    for (var k = 0; k < entityPadding; ++k)
-                        world.CreateEntity();
-
-                    world.CreateEntity(new Position());
-                }
-
-                world.Start();
-
-                var start = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                while (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < start + time)
-                    world.Tick(0f);
-            
-                Console.WriteLine(world.Ticks);
-            
-                world.Stop();
-                world.Dispose();
+                world.CreateEntity(new Position());
             }
-            
 
+            world.Start();
+
+            var start = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            while (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < start + time)
+                world.Tick(0f);
+
+            world.Stop();
+            world.Dispose();
         }
     }
 }
-

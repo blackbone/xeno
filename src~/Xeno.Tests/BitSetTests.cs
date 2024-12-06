@@ -1,4 +1,3 @@
-using Xeno.Collections;
 using Xeno.Vendor;
 
 namespace Xeno.Tests;
@@ -8,17 +7,23 @@ public class BitSetTests {
     [Test]
     [TestCase(0, 1)]
     [TestCase(32, 1)]
-    [TestCase(64, 1)]
+    [TestCase(63, 1)]
+    [TestCase(64, 2)]
     [TestCase(100, 2)]
-    [TestCase(256, 4)]
-    [TestCase(1024, 16)]
-    [TestCase(16666, 261)]
-    public unsafe void BitSet_Ctor(int capacity, int len) {
-        if (capacity > Constants.MaxArchetypeComponents) {
-            Assert.Throws<IndexOutOfRangeException>(() => new BitSet(stackalloc ulong[BitSet.MaskSize(capacity)]));
+    [TestCase(255, 4)]
+    [TestCase(256, 5)]
+    [TestCase(1023, 16)]
+    [TestCase(1024, 17)]
+    [TestCase(Constants.MaxArchetypeComponents, 261)]
+    public unsafe void BitSet_Ctor(int max, int len)
+    {
+        if (max >= Constants.MaxArchetypeComponents)
+        {
+            Assert.Throws<IndexOutOfRangeException>(() => new BitSet(stackalloc ulong[BitSet.MaskSize(max)]));
         }
-        else {
-            var bitset = new BitSet(stackalloc ulong[BitSet.MaskSize(capacity)]);
+        else
+        {
+            var bitset = new BitSet(stackalloc ulong[BitSet.MaskSize(max)]);
             Assert.That(bitset.data.Length, Is.EqualTo(len));
         }
     }
@@ -38,7 +43,7 @@ public class BitSetTests {
     [TestCase(1024)]
     [TestCase(262144)]
     public unsafe void BitSet_Set(int count) {
-        if (count > Constants.MaxArchetypeComponents) {
+        if (count >= Constants.MaxArchetypeComponents) {
             Assert.Throws<IndexOutOfRangeException>(() => new BitSet(stackalloc ulong[BitSet.MaskSize(count)]));
         }
         else {
@@ -67,14 +72,17 @@ public class BitSetTests {
     [TestCase(1023)]
     [TestCase(1024)]
     [TestCase(262144)]
-    public unsafe void BitSet_Unset(int count) {
-        if (count > Constants.MaxArchetypeComponents)
+    public unsafe void BitSet_Unset(int count)
+    {
+        if (count >= Constants.MaxArchetypeComponents)
             Assert.Throws<IndexOutOfRangeException>(() => new BitSet(stackalloc ulong[BitSet.MaskSize(count)]));
-        else if (count == 0) {
+        else if (count == 0)
+        {
             var bitset = new BitSet(stackalloc ulong[BitSet.MaskSize(count)]);
             Assert.That(bitset.data.Length, Is.EqualTo(1));
         }
-        else {
+        else
+        {
             var bitset = new BitSet(stackalloc ulong[BitSet.MaskSize(count)]);
 
             int i = 0;
@@ -108,21 +116,20 @@ public class BitSetTests {
     [TestCase(1024)]
     [TestCase(262144)]
     public unsafe void BitSet_Get(int count) {
-        if (count > Constants.MaxArchetypeComponents)
+        if (count >= Constants.MaxArchetypeComponents)
             Assert.Throws<IndexOutOfRangeException>(() => new BitSet(stackalloc ulong[BitSet.MaskSize(count)]));
-        else if (count == 0) {
+        else if (count == 0)
+        {
             var bitset = new BitSet(stackalloc ulong[BitSet.MaskSize(count)]);
             Assert.That(bitset.data.Length, Is.EqualTo(1));
         }
-        else {
+        else
+        {
             var bitset = new BitSet(stackalloc ulong[count]);
 
-            Console.WriteLine(bitset.ToS());
             var i = 0;
-            while (i < count) {
+            while (i < count)
                 bitset.Set(i++);
-                Console.WriteLine(bitset.ToS());
-            }
 
             Assert.That(bitset.Get(i - 1), Is.True);
             Assert.That(bitset.Get(i), Is.False);

@@ -229,16 +229,16 @@ namespace Xeno {
             var d1 = s.sparse[entityId];
             if (d1 > s.count) return;
 
-            var sp = s.dense.At(d1);
+            var sp = s.dense[d1];
             if (sp != entityId) return;
 
             var last = --s.count;
 
-            s.data.At(d1) = s.data.At(last);
+            s.data[d1] = s.data[last];
 
-            var ld = s.dense.At(last);
-            s.dense.At(d1) = ld;
-            s.sparse.At(ld) = d1;
+            var ld = s.dense[last];
+            s.dense[d1] = ld;
+            s.sparse[ld] = d1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -282,17 +282,17 @@ namespace Xeno {
             var d1 = s.sparse[entityId];
             if (d1 > s.count) return false;
 
-            var sp = s.dense.At(d1);
+            var sp = s.dense[d1];
             if (sp != entityId) return false;
 
             var last = --s.count;
 
-            component1 = s.data.At(d1);
-            s.data.At(d1) = s.data.At(last);
+            component1 = s.data[d1];
+            s.data[d1] = s.data[last];
 
-            var ld = s.dense.At(last);
-            s.dense.At(d1) = ld;
-            s.sparse.At(ld) = d1;
+            var ld = s.dense[last];
+            s.dense[d1] = ld;
+            s.sparse[ld] = d1;
 
             return true;
         }
@@ -337,8 +337,9 @@ namespace Xeno {
         private bool HasComponent_Internal<T1>(in uint entityId)
             where T1 : struct, IComponent
         {
-            ref var s = ref stores.At(CI<T1>.Index);
+            ref var s = ref stores[CI<T1>.Index];
             if (s == null) return false;
+            if (entityId >= s.sparse.Length) return false;
 
             var d = s.sparse[entityId];
             return d < s.count && s.dense[entityId] == entityId;
@@ -397,6 +398,19 @@ namespace Xeno {
                 || HasComponent_Internal<T2>(entityId)
                 || HasComponent_Internal<T3>(entityId)
                 || HasComponent_Internal<T4>(entityId);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ref T1 RefComponent_Internal<T1>(in uint entityId)
+            where T1 : struct, IComponent {
+            ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            if (s == null) return ref CI<T1>.Default;
+
+            var d = s.sparse[entityId];
+            if (d > s.count) return ref CI<T1>.Default;
+            var sp = s.dense[d];
+            if (sp != entityId) return ref CI<T1>.Default;
+            return ref s.data[d];
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool RefComponents_Internal<T1>(in uint entityId, ref T1 component1)

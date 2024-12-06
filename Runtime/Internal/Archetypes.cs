@@ -53,7 +53,7 @@ namespace Xeno {
         public static void Add(this Archetypes archetypes, ref BitSet mask, in uint entityId, out Archetype archetype, out uint inArchetypeLocalIndex) {
              // iterate over to find matching archetype
             var v = archetypes.head;
-            while (v != null && v.mask.hash != mask.hash && v.mask.indexJoin != mask.indexJoin) {
+            while (v != null && v.mask.hash != mask.hash) {
                 v = v.next;
             }
 
@@ -101,7 +101,7 @@ namespace Xeno {
         public static void Add(this Archetypes archetypes, BitSetReadOnly mask, uint entityId, out Archetype archetype, out uint inArchetypeLocalIndex) {
             // iterate over to find matching archetype
             var v = archetypes.head;
-            while (v != null && (v.mask.hash != mask.hash || v.mask.indexJoin != mask.indexJoin)) {
+            while (v != null && v.mask.hash != mask.hash) {
                 v = v.next;
             }
 
@@ -153,24 +153,25 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Remove(this Archetypes archetypes, Archetype archetype, uint entityId, uint[] inArchetypeLocalIndices) {
             var localArchetypeIndex = inArchetypeLocalIndices[entityId];
-            if (localArchetypeIndex >= archetype.entitiesCount) throw new IndexOutOfRangeException();
+            if (localArchetypeIndex >= archetype.entitiesCount) throw new IndexOutOfRangeException($"entityId: {entityId}, localIndex: {localArchetypeIndex}, entityCount: {archetype.entitiesCount}");
 
-            archetype.entitiesCount--;
+            var lastIndex = archetype.entitiesCount - 1;
             // if deleting element which is not last - need to fill hole with last
             if (localArchetypeIndex < archetype.entitiesCount) {
                 // get last entity id
-                var currentLastId = archetype.entities[archetype.entitiesCount];
+                var currentLastId = archetype.entities[lastIndex];
 
                 // clear the value
-                archetype.entities[archetype.entitiesCount] = default;
+                archetype.entities[lastIndex] = 0;
                 archetype.entities[localArchetypeIndex] = currentLastId;
                 inArchetypeLocalIndices[currentLastId] = localArchetypeIndex;
             }
+            archetype.entitiesCount--;
 
             if (!archetype.floating || archetype.entitiesCount > 0)
                 return;
 
-            if (archetype == archetypes.head) archetypes.head = archetype.next;
+            if (archetype.Equals(archetypes.head)) archetypes.head = archetype.next;
             if (archetype.prev != null) archetype.prev.next = archetype.next;
             if (archetype.next != null) archetype.next.prev = archetype.prev;
 

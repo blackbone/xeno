@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Xeno {
@@ -11,7 +10,7 @@ namespace Xeno {
         private uint entityCount;
         internal RWEntity[] entities;
         private uint freeIdsCount;
-        private uint[] freeIds;
+        internal uint[] freeIds;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsEntityValid_Internal(in Entity entity) {
@@ -30,26 +29,21 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InitEmptyEntities_Internal(uint from, in uint to) {
             var count = to - from + 1;
-            var span_entities = entities.AsSpan((int)from, (int)count);
+            var freeIdsLength = freeIds.Length;
 
-            var size = freeIds.Length == 0 ? 1 : freeIds.Length;
+            var size = freeIdsLength == 0 ? 1 : freeIdsLength;
             while (size < freeIdsCount + count) size <<= 1;
             Array.Resize(ref freeIds, size);
-            var span_freeIds_c = freeIds.Length - (int)freeIdsCount;
-            var span_freeIds = freeIds.AsSpan((int)freeIdsCount, span_freeIds_c);
-            var freeIdsCount_int = (int)freeIdsCount;
 
-            for (var i = 0; i < span_entities.Length; i++) {
-                ref var e = ref span_entities[i];
-                var id = from + (uint)i;
-                e.Id = id;
-                e.WorldId = Id;
-                e.Version = 0;
-                span_freeIds[--span_freeIds_c] = id;
-                freeIdsCount_int++;
+            // Start filling freeIds in reverse order
+            for (var i = to; i != uint.MaxValue && i >= from; i--) {
+                ref var entity = ref entities[i];
+                entity.Id = i;
+                entity.WorldId = Id;
+                entity.Version = 0;
+
+                freeIds[freeIdsCount++] = i;
             }
-
-            freeIdsCount = (uint)freeIdsCount_int;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
