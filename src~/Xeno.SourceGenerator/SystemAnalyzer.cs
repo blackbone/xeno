@@ -70,11 +70,11 @@ public sealed class SystemAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor StartupShutdownMethodInvalidSignature = new(
         "XEN004",
         "Invalid method signature",
-        "Startup and shut down methods must be void with no parameters",
+        "Startup and shut down methods must be void with no parameters or only uniform parameters",
         "Xeno",
         DiagnosticSeverity.Error,
         true,
-        "Change method signature to void().");
+        "Change method signature to void() or void([Uniform] p).");
 
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
@@ -132,7 +132,7 @@ public sealed class SystemAnalyzer : DiagnosticAnalyzer
             var type = (SystemMethodType)(int)attribute.ConstructorArguments[0].Value;
             if (type is SystemMethodType.Startup or SystemMethodType.Shutdown)
             {
-                if (!method.ReturnsVoid || method.Parameters.Length > 0)
+                if (!method.ReturnsVoid || method.Parameters.Count(p => p.IsUniformParameter(out _, out _)) != method.Parameters.Length)
                     context.ReportDiagnostic(Diagnostic.Create(StartupShutdownMethodInvalidSignature, method.Locations[0], method.Name));
             }
             else

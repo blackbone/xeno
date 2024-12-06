@@ -21,7 +21,7 @@ namespace Xeno.SourceGenerator
             Shutdown
         }
 
-        private SourceText SystemTemplate(in string ns, in string systemName, in string[] genericArgs, IReadOnlyDictionary<int, List<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)>> systemMethods)
+        private SourceText SystemTemplate(in string ns, in string systemName, in string[] genericArgs, IReadOnlyDictionary<int, List<(IMethodSymbol method, int order)>> systemMethods)
         {
             return CSharpSyntaxTree.ParseText($@"
 using Xeno;
@@ -30,7 +30,7 @@ namespace {ns}
 {{
     public partial class {systemName}{(genericArgs.Length > 0 ? $"<{string.Join(", ", genericArgs)}>" : "")} : global::Xeno.System
     {{
-        {PlaceUniforms(systemMethods.Where(g => g.Key != (int)SystemMethodType.Startup && g.Key != (int)SystemMethodType.Shutdown).SelectMany(kv => kv.Value))}
+        {PlaceUniforms(systemMethods.SelectMany(kv => kv.Value))}
         {PlaceDelegates(systemMethods.Where(g => g.Key != (int)SystemMethodType.Startup && g.Key != (int)SystemMethodType.Shutdown).SelectMany(kv => kv.Value))}
         
         protected override bool IsWorldStartSystem => {(systemMethods.ContainsKey((int)SystemMethodType.Startup) ? "true" : "false")};
@@ -77,119 +77,102 @@ namespace {ns}
                 .GetText();
         }
 
-        private string PlaceOrderedCalls(List<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)> systemMethods)
+        private string PlaceOrderedCalls(List<(IMethodSymbol method, int order)> systemMethods)
         {
             if (systemMethods == null) return string.Empty;
-            
+
             var sb = new StringBuilder();
             systemMethods.Sort((a, b) => a.order - b.order);
-            
-            foreach (var (method, _, includeDisabled, changedOnly) in systemMethods)
-            {
-                var parameters = method.Parameters;
-                // void ()
-                if (parameters.Length == 0)
-                {
-                    sb.AppendLine($"{method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}();");
-                    continue;
-                }
 
-                // void (ref C1, ref C2, ref C3...)
-                if (parameters.All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
-                    continue;
-                }
-                
-                // void (in Entity, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
-                    && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
-
-                    continue;
-                }
-                
-                // void (in Uniform, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.IsValueType && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    if (method.Parameters[0].Type.Equals(deltaType, SymbolEqualityComparer.Default)
-                        && method.Parameters[0].GetAttributes().Any(a => a.AttributeClass.Equals(deltaAttributeType, SymbolEqualityComparer.Default)))
-                    {
-                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {method.Name}Uniform_{method.GetHashCode()});");
-                    }
-                    continue;
-                }
-                
-                // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
-                    && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters[1].Type.IsValueType && method.Parameters[1].RefKind == RefKind.In
-                    && method.Parameters.Skip(2).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    if (method.Parameters[1].Type.Equals(deltaType, SymbolEqualityComparer.Default))
-                    {
-                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {method.Name}Uniform_{method.GetHashCode()});");
-                    }
-                }
-                
-                // INVALID SIGNATURE!
-            }
-            
-            
-            for (var i = 0; i < systemMethods.Count; i++)
-            {
-                var method = systemMethods[i].method;
-                // simple call
-                var parameters = method.Parameters;
-                if (parameters.Length == 0)
-                {
-                    sb.AppendLine($"{method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}();");
-                }
-                else
-                {
-                }
-                    
-                sb.AppendLine();
-            }
-            return sb.ToString();
-        }
-
-
-        private string PlaceUniforms(IEnumerable<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)> systemMethods)
-        {
-            var sb = new StringBuilder();
-            foreach (var (method, _, includeDisabled, changedOnly) in systemMethods)
+            foreach (var (method, _) in systemMethods)
             {
                 var parameters = method.Parameters;
 
-                // void (in Uniform, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.IsValueType
-                    && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref)) {
-                    sb.AppendLine($"private {method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {method.Name}Uniform_{method.GetHashCode()};");
-                    continue;
+                { // void ()
+                    if (parameters.Length == 0)
+                    {
+                        sb.AppendLine($"{method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}();");
+                        continue;
+                    }
                 }
 
-                // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
-                    && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters[1].Type.IsValueType
-                    && method.Parameters[1].RefKind == RefKind.In
-                    && method.Parameters[1].HasUniformAttributes()
-                    && method.Parameters.Skip(2).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    sb.AppendLine($"private {method.Parameters[1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {method.Name}Uniform_{method.GetHashCode()};");
+                { // void (in/ref Uniform)
+                    if (parameters.Length == 1 && parameters[0].IsUniformParameter(out var kind, out var name))
+                    {
+                        var uniformPrefix = parameters[0].RefKind.ToParameterPrefix();
+                        switch (kind) {
+                            case UniformKind.None:
+                                sb.AppendLine($"{method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}({uniformPrefix}{method.Name}Uniform_{method.GetHashCode()});");
+                                break;
+                            case UniformKind.Named:
+                                sb.AppendLine($"{method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}({uniformPrefix}{name});");
+                                break;
+                            default: throw new ArgumentOutOfRangeException();
+                        }
+                        continue;
+                    }
+                }
+
+                { // void (ref C1, ref C2, ref C3...)
+                    if (parameters.All(p => p.IsComponentParameter()))
+                    {
+                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+                        continue;
+                    }
+                }
+
+
+                { // void (in Entity, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsEntityParameter()
+                        && parameters.Skip(1).All(p => p.IsComponentParameter()))
+                    {
+                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+
+                        continue;
+                    }
+                }
+
+                { // void (in/ref Uniform, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsUniformParameter(out var kind, out var name)
+                        && parameters.Skip(1).All(p => p.IsComponentParameter()))
+                    {
+                        var uniformPrefix = parameters[0].RefKind.ToParameterPrefix();
+                        switch (kind) {
+                            case UniformKind.None:
+                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{method.Name}Uniform_{method.GetHashCode()});");
+                                break;
+                            case UniformKind.Delta:
+                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
+                                break;
+                            case UniformKind.Named:
+                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{name});");
+                                break;
+                            default: throw new ArgumentOutOfRangeException();
+                        }
+                        continue;
+                    }
+                }
+
+                { // void (in Entity, in/ref Uniform, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsEntityParameter()
+                        && parameters[1].IsUniformParameter(out var kind, out var name)
+                        && parameters.Skip(2).All(p => p.IsComponentParameter()))
+                    {
+                        var uniformPrefix = parameters[0].RefKind.ToParameterPrefix();
+                        switch (kind) {
+                            case UniformKind.None:
+                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{method.Name}Uniform_{method.GetHashCode()});");
+                                break;
+                            case UniformKind.Delta:
+                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
+                                break;
+                            case UniformKind.Named:
+                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{name});");
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
                 }
 
                 // INVALID SIGNATURE!
@@ -197,50 +180,88 @@ namespace {ns}
             return sb.ToString();
         }
 
-
-        private string PlaceDelegates(IEnumerable<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)> systemMethods)
+        private static string PlaceUniforms(IEnumerable<(IMethodSymbol method, int order)> systemMethods)
         {
             var sb = new StringBuilder();
-            foreach (var (method, _, includeDisabled, changedOnly) in systemMethods)
+            foreach (var (method, _) in systemMethods)
+            {
+                var parameters = method.Parameters;
+                if (parameters.Length == 0) continue;
+
+                { // void (in/ref Uniform)
+                    if (parameters.Length == 1 && parameters[0].IsUniformParameter(out var kind, out _) && kind == UniformKind.None)
+                    {
+                        sb.AppendLine($"private {parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {method.Name}Uniform_{method.GetHashCode()};");
+                        continue;
+                    }
+                }
+
+                { // void (in Uniform, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsUniformParameter(out var kind, out _) && kind == UniformKind.None
+                        && parameters.Skip(1).All(p => p.IsComponentParameter())) {
+                        sb.AppendLine($"private {parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {method.Name}Uniform_{method.GetHashCode()};");
+                        continue;
+                    }
+                }
+
+                { // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsEntityParameter()
+                        && parameters[1].IsUniformParameter(out var kind, out _) && kind == UniformKind.None
+                        && parameters.Skip(2).All(p => p.IsComponentParameter()))
+                    {
+                        sb.AppendLine($"private {parameters[1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {method.Name}Uniform_{method.GetHashCode()};");
+                    }
+                }
+
+                // INVALID SIGNATURE!
+            }
+            return sb.ToString();
+        }
+
+        private string PlaceDelegates(IEnumerable<(IMethodSymbol method, int order)> systemMethods)
+        {
+            var sb = new StringBuilder();
+            foreach (var (method, _) in systemMethods)
             {
                 var parameters = method.Parameters;
 
-                // void (ref C1, ref C2, ref C3...)
-                if (parameters.All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    var typeListFormatted = string.Join(", ", parameters.Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                    sb.AppendLine($"private readonly ComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
-                    continue;
+                { // void (ref C1, ref C2, ref C3...)
+                    if (parameters.All(p => p.IsComponentParameter()))
+                    {
+                        var typeListFormatted = string.Join(", ", parameters.Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
+                        sb.AppendLine($"private readonly ComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
+                        continue;
+                    }
                 }
                 
-                // void (in Entity, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default) && method.Parameters[0].RefKind == RefKind.In
-                         && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    var typeListFormatted = string.Join(", ", parameters.Skip(1).Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                    sb.AppendLine($"private readonly EntityComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
-                    continue;
+                { // void (in Entity, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsEntityParameter()
+                        && parameters.Skip(1).All(p => p.IsComponentParameter()))
+                    {
+                        var typeListFormatted = string.Join(", ", parameters.Skip(1).Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
+                        sb.AppendLine($"private readonly EntityComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
+                        continue;
+                    }
                 }
                 
-                // void (in Uniform, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.IsValueType && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters.Skip(1).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    var typeListFormatted = string.Join(", ", parameters.Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                    sb.AppendLine($"private readonly UniformComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
-                    continue;
+                { // void (in Uniform, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsUniformParameter(out _, out _)
+                        && parameters.Skip(1).All(p => p.IsComponentParameter()))
+                    {
+                        var typeListFormatted = string.Join(", ", parameters.Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
+                        sb.AppendLine($"private readonly Uniform{parameters[0].RefKind}ComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
+                        continue;
+                    }
                 }
-                
-                // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
-                if (method.Parameters[0].Type.Equals(entityType, SymbolEqualityComparer.Default)
-                    && method.Parameters[0].RefKind == RefKind.In
-                    && method.Parameters[1].Type.IsValueType
-                    && method.Parameters[1].RefKind == RefKind.In
-                    && method.Parameters[1].HasUniformAttributes()
-                    && method.Parameters.Skip(2).All(p => IsComponentType(p.Type) && p.RefKind == RefKind.Ref))
-                {
-                    var typeListFormatted = string.Join(", ", parameters.Skip(1).Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                    sb.AppendLine($"private readonly EntityUniformComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
+
+                { // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
+                    if (parameters[0].IsEntityParameter()
+                        && parameters[1].IsUniformParameter(out _, out  _)
+                        && parameters.Skip(2).All(p => p.IsComponentParameter()))
+                    {
+                        var typeListFormatted = string.Join(", ", parameters.Skip(1).Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
+                        sb.AppendLine($"private readonly EntityUniform{parameters[0].RefKind}ComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
+                    }
                 }
                 
                 // INVALID SIGNATURE!
@@ -248,29 +269,57 @@ namespace {ns}
             return sb.ToString();
         }
         
-        private string PlaceDelegateInitializers(IEnumerable<(IMethodSymbol method, int order, bool includeDisabled, bool changedOnly)> systemMethods)
+        private string PlaceDelegateInitializers(IEnumerable<(IMethodSymbol method, int order)> systemMethods)
         {
             var sb = new StringBuilder();
-            foreach (var (method, _, includeDisabled, changedOnly) in systemMethods)
+            foreach (var (method, _) in systemMethods)
             {
                 sb.AppendLine($"{method.Name}Delegate_{method.GetHashCode()} = {method.Name};");
             }
             return sb.ToString();
         }
-
-        private bool IsComponentType(ITypeSymbol type)
-        {
-            if (type.Kind == SymbolKind.NamedType) return type.AllInterfaces.Contains(componentInterfaceType);
-            if (type.Kind == SymbolKind.TypeParameter) return ((ITypeParameterSymbol)type).ConstraintTypes.Contains(componentInterfaceType);
-            throw new InvalidCastException();
-        }
     }
-    
+
     internal static class RefKindExtensions
     {
+        internal static bool IsComponentParameter(this IParameterSymbol parameter) {
+            if (parameter.RefKind != RefKind.Ref) return false;
+            if (parameter.Type.Kind == SymbolKind.NamedType) return parameter.Type.AllInterfaces.Contains(SystemSourceGenerator.componentInterfaceType);
+            if (parameter.Type.Kind == SymbolKind.TypeParameter) return ((ITypeParameterSymbol)parameter.Type).ConstraintTypes.Contains(SystemSourceGenerator.componentInterfaceType);
+            return false;
+        }
+
+        internal static bool IsEntityParameter(this IParameterSymbol parameter) {
+            return parameter.RefKind is RefKind.In && parameter.Type.Equals(SystemSourceGenerator.entityType, SymbolEqualityComparer.Default);
+        }
+
+        internal static bool IsUniformParameter(this IParameterSymbol parameter, out UniformKind kind, out string name) {
+            kind = default;
+            name = default;
+
+            if (parameter.RefKind != RefKind.In && parameter.RefKind != RefKind.Ref)
+                return false;
+
+            var attribute = parameter.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Equals(SystemSourceGenerator.uniformAttributeType) ?? false);
+            if (attribute == null)
+                return false;
+
+            switch (attribute.ConstructorArguments[0].Value) {
+                case bool b:
+                    kind = b ? UniformKind.Delta : UniformKind.None;
+                    return true;
+                case string s:
+                    name = s;
+                    kind = UniformKind.Named;
+                    return true;
+            }
+
+            return false;
+        }
+
         internal static bool HasUniformAttributes(this IParameterSymbol parameter) {
             var attributes = parameter.GetAttributes();
-            return attributes.Any(a => a.AttributeClass.Name == "UniformAttribute" || a.AttributeClass.Name == "ComponentAttribute");
+            return attributes.Any(a => a.AttributeClass.Name == "UniformAttribute");
         }
 
         internal static string ToParameterPrefix(this RefKind kind)
@@ -279,7 +328,7 @@ namespace {ns}
             {
                 case RefKind.Out: return "out ";
                 case RefKind.Ref: return "ref ";
-                case RefKind.In: return "in ";
+                case RefKind.In: return "";
                 case RefKind.None: return string.Empty;
 
                 default: throw new ArgumentOutOfRangeException(nameof(kind), kind, null);

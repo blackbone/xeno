@@ -1,4 +1,3 @@
-using Xeno.Collections;
 using Xeno.Vendor;
 
 namespace Xeno.Tests;

@@ -1,10 +1,4 @@
-using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
-using Xeno;
 using Xeno.SourceGenerator.Sample;
 using IComponent = Xeno.IComponent;
 

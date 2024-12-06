@@ -395,7 +395,7 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1>(UniformComponentDelegate<TU, T1> update, in TU uniform)
+        public void Iterate<TU, T1>(UniformInComponentDelegate<TU, T1> update, in TU uniform)
             where T1 : struct, IComponent
         {
             // just ref-ing all components data without checking
@@ -406,13 +406,35 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1>(EntityUniformComponentDelegate<TU, T1> update, in TU uniform)
+        public void Iterate<TU, T1>(UniformRefComponentDelegate<TU, T1> update, ref TU uniform)
+            where T1 : struct, IComponent
+        {
+            // just ref-ing all components data without checking
+            ref var cs1 = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            for (var i = 0; i < cs1.count; i++) {
+                update(ref uniform, ref cs1.data.At(i));
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1>(EntityUniformInComponentDelegate<TU, T1> update, in TU uniform)
             where T1 : struct, IComponent
         {
             // just ref-ing all components data without checking
             var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
             for (var i = 0; i < cs1.count; i++) {
                 update(entities.AtCast<RWEntity, Entity>(cs1.dense[i]), uniform, ref cs1.data.At(i));
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1>(EntityUniformRefComponentDelegate<TU, T1> update, ref TU uniform)
+            where T1 : struct, IComponent
+        {
+            // just ref-ing all components data without checking
+            var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            for (var i = 0; i < cs1.count; i++) {
+                update(entities.AtCast<RWEntity, Entity>(cs1.dense[i]), ref uniform, ref cs1.data.At(i));
             }
         }
 
@@ -462,7 +484,7 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2>(UniformComponentDelegate<TU, T1, T2> update, in TU uniform)
+        public void Iterate<TU, T1, T2>(UniformInComponentDelegate<TU, T1, T2> update, in TU uniform)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
         {
@@ -485,7 +507,30 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2>(EntityUniformComponentDelegate<TU, T1, T2> update, in TU uniform)
+        public void Iterate<TU, T1, T2>(UniformRefComponentDelegate<TU, T1, T2> update, ref TU uniform)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+        {
+            var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            var cs2 = Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
+
+            var current = archetypes.head;
+            uint[] entityIds = default;
+            var count = 0;
+            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
+                for (var i = count - 1; i >= 0; i--) {
+                    var eid = entityIds[i];
+                    update(
+                        ref uniform,
+                        ref cs1.data[cs1.sparse[eid]],
+                        ref cs2.data[cs2.sparse[eid]]
+                    );
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1, T2>(EntityUniformInComponentDelegate<TU, T1, T2> update, in TU uniform)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
         {
@@ -501,6 +546,30 @@ namespace Xeno
                     update(
                         entities.AtCast<RWEntity, Entity>(cs1.dense[i]),
                         uniform,
+                        ref cs1.data[cs1.sparse[eid]],
+                        ref cs2.data[cs2.sparse[eid]]
+                    );
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1, T2>(EntityUniformRefComponentDelegate<TU, T1, T2> update, ref TU uniform)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+        {
+            var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            var cs2 = Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
+
+            var current = archetypes.head;
+            uint[] entityIds = default;
+            var count = 0;
+            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
+                for (var i = count - 1; i >= 0; i--) {
+                    var eid = entityIds[i];
+                    update(
+                        entities.AtCast<RWEntity, Entity>(cs1.dense[i]),
+                        ref uniform,
                         ref cs1.data[cs1.sparse[eid]],
                         ref cs2.data[cs2.sparse[eid]]
                     );
@@ -560,7 +629,7 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3>(UniformComponentDelegate<TU, T1, T2, T3> update, in TU uniform)
+        public void Iterate<TU, T1, T2, T3>(UniformInComponentDelegate<TU, T1, T2, T3> update, in TU uniform)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
@@ -586,7 +655,33 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3>(EntityUniformComponentDelegate<TU, T1, T2, T3> update, in TU uniform)
+        public void Iterate<TU, T1, T2, T3>(UniformRefComponentDelegate<TU, T1, T2, T3> update, ref TU uniform)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+        {
+            var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            var cs2 = Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
+            var cs3 = Unsafe.As<Store, Store<T3>>(ref stores[CI<T3>.Index]);
+
+            var current = archetypes.head;
+            uint[] entityIds = default;
+            var count = 0;
+            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
+                for (var i = count - 1; i >= 0; i--) {
+                    var eid = entityIds[i];
+                    update(
+                        ref uniform,
+                        ref cs1.data[cs1.sparse[eid]],
+                        ref cs2.data[cs2.sparse[eid]],
+                        ref cs3.data[cs3.sparse[eid]]
+                    );
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1, T2, T3>(EntityUniformInComponentDelegate<TU, T1, T2, T3> update, in TU uniform)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
@@ -604,6 +699,33 @@ namespace Xeno
                     update(
                         entities.AtCast<RWEntity, Entity>(cs1.dense[i]),
                         uniform,
+                        ref cs1.data[cs1.sparse[eid]],
+                        ref cs2.data[cs2.sparse[eid]],
+                        ref cs3.data[cs3.sparse[eid]]
+                    );
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1, T2, T3>(EntityUniformRefComponentDelegate<TU, T1, T2, T3> update, ref TU uniform)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+        {
+            var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            var cs2 = Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
+            var cs3 = Unsafe.As<Store, Store<T3>>(ref stores[CI<T3>.Index]);
+
+            var current = archetypes.head;
+            uint[] entityIds = default;
+            var count = 0;
+            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
+                for (var i = count - 1; i >= 0; i--) {
+                    var eid = entityIds[i];
+                    update(
+                        entities.AtCast<RWEntity, Entity>(cs1.dense[i]),
+                        ref uniform,
                         ref cs1.data[cs1.sparse[eid]],
                         ref cs2.data[cs2.sparse[eid]],
                         ref cs3.data[cs3.sparse[eid]]
@@ -670,7 +792,7 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3, T4>(UniformComponentDelegate<TU, T1, T2, T3, T4> update, in TU uniform)
+        public void Iterate<TU, T1, T2, T3, T4>(UniformInComponentDelegate<TU, T1, T2, T3, T4> update, in TU uniform)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
@@ -699,7 +821,36 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3, T4>(EntityUniformComponentDelegate<TU, T1, T2, T3, T4> update, in TU uniform)
+        public void Iterate<TU, T1, T2, T3, T4>(UniformRefComponentDelegate<TU, T1, T2, T3, T4> update, ref TU uniform)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
+        {
+            var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            var cs2 = Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
+            var cs3 = Unsafe.As<Store, Store<T3>>(ref stores[CI<T3>.Index]);
+            var cs4 = Unsafe.As<Store, Store<T4>>(ref stores[CI<T4>.Index]);
+
+            var current = archetypes.head;
+            uint[] entityIds = default;
+            var count = 0;
+            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
+                for (var i = count - 1; i >= 0; i--) {
+                    var eid = entityIds[i];
+                    update(
+                        ref uniform,
+                        ref cs1.data[cs1.sparse[eid]],
+                        ref cs2.data[cs2.sparse[eid]],
+                        ref cs3.data[cs3.sparse[eid]],
+                        ref cs4.data[cs4.sparse[eid]]
+                    );
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1, T2, T3, T4>(EntityUniformInComponentDelegate<TU, T1, T2, T3, T4> update, in TU uniform)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
@@ -719,6 +870,36 @@ namespace Xeno
                     update(
                         entities.AtCast<RWEntity, Entity>(cs1.dense[i]),
                         uniform,
+                        ref cs1.data[cs1.sparse[eid]],
+                        ref cs2.data[cs2.sparse[eid]],
+                        ref cs3.data[cs3.sparse[eid]],
+                        ref cs4.data[cs4.sparse[eid]]
+                    );
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Iterate<TU, T1, T2, T3, T4>(EntityUniformRefComponentDelegate<TU, T1, T2, T3, T4> update, ref TU uniform)
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent
+        {
+            var cs1 = Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            var cs2 = Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
+            var cs3 = Unsafe.As<Store, Store<T3>>(ref stores[CI<T3>.Index]);
+            var cs4 = Unsafe.As<Store, Store<T4>>(ref stores[CI<T4>.Index]);
+
+            var current = archetypes.head;
+            uint[] entityIds = default;
+            var count = 0;
+            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
+                for (var i = count - 1; i >= 0; i--) {
+                    var eid = entityIds[i];
+                    update(
+                        entities.AtCast<RWEntity, Entity>(cs1.dense[i]),
+                        ref uniform,
                         ref cs1.data[cs1.sparse[eid]],
                         ref cs2.data[cs2.sparse[eid]],
                         ref cs3.data[cs3.sparse[eid]],
