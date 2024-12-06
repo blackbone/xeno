@@ -1,3 +1,0 @@
-using Xeno;
-
-// [assembly: PrimaryEcsAssembly]

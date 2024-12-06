@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Xeno {
     public class NoComponentException : Exception {
-        private static readonly string Message = "Component {0} you're trying to access not presented on E_{1}({2}) of world [{4}]{3}.";
+        private new static readonly string Message = "Component {0} you're trying to access not presented on E_{1}({2}) of world [{4}]{3}.";
         private NoComponentException(string type, (uint Id, uint Version, (string Name, ushort Id) w) e)
             : base(string.Format(Message, type, e.Id, e.Version, e.w.Name, e.w.Id)) { }
 

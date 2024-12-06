@@ -1,18 +1,21 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using NotImplementedException = System.NotImplementedException;
+using Xeno.SourceGenerator.SyntaxReceivers;
 
 namespace Xeno.SourceGenerator;
 
 using static SyntaxFactory;
 
-public static class WorldGenerator {
+internal static class WorldGenerator {
     public static StatementSyntax DisposeCheck { get; } = ParseStatement("Xeno.WorldDisposedException.ThrowIf(isDisposed, this.Describe());");
 
     public static void Generate(GeneratorInfo info) {
+        if (!Ensure.IsEcsAssembly(info.Compilation)) return;
+
         GenerateBase(info);
         GenerateEntities(info);
         GenerateArchetypes(info);
@@ -26,15 +29,18 @@ public static class WorldGenerator {
         info.Context.Add("Xeno/World.g.cs", root);
         return;
 
-        static IEnumerable<MemberDeclarationSyntax> GetMembers() {
+        IEnumerable<MemberDeclarationSyntax> GetMembers() {
             // fields
             yield return Helpers.PublicReadOnlyField("string", "Name");
             yield return Helpers.PublicReadOnlyField("ushort", "Id");
             yield return Helpers.PrivateField("bool", "isDisposed")
                 .WithTrailingTrivia(Comment("\n"));
 
+            var passInSystemInstanceArguments = string.Join(", ", info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"in {s.TypeFullName} {s.FieldName}"));
+            var passSystemInstanceArguments = string.Join(", ", info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"{s.FieldName}"));
+
             // constructor
-            yield return Helpers.PublicConstructor("World", "in string name, in ushort id")
+            yield return Helpers.PublicConstructor("World", $"in string name, in ushort id {(string.IsNullOrEmpty(passInSystemInstanceArguments) ? "" : $", {passInSystemInstanceArguments}")}")
                 .AddAttributeLists(Helpers.AggressiveInlining)
                 .WithBody(Block(
                     ParseStatement("Id = id;"),
@@ -43,7 +49,8 @@ public static class WorldGenerator {
                     // TODO: make this constants configurable
                     ParseStatement("InitializeEntities(4096);"),
                     ParseStatement("InitializeArchetypes(256);"),
-                    ParseStatement("InitializeStores(4096, 128);")
+                    ParseStatement("InitializeStores(4096, 128);"),
+                    ParseStatement($"InitializeSystems({passSystemInstanceArguments});")
                 ));
 
             // disposer
@@ -51,6 +58,7 @@ public static class WorldGenerator {
                 .AddAttributeLists(Helpers.AggressiveInlining)
                 .WithBody(Block(
                     DisposeCheck,
+                    ParseStatement("DisposeSystems();"),
                     ParseStatement("DisposeStores();"),
                     ParseStatement("DisposeArchetypes();"),
                     ParseStatement("DisposeEntities();"),
@@ -73,11 +81,13 @@ public static class WorldGenerator {
             yield return Helpers.PartialVoidMethod("InitializeEntities", "in uint capacity").WithTrailingTrivia(Comment(";"));
             yield return Helpers.PartialVoidMethod("InitializeArchetypes", "in uint capacity").WithTrailingTrivia(Comment(";"));
             yield return Helpers.PartialVoidMethod("InitializeStores", "in uint sparseCapacity, in uint denseCapacity").WithTrailingTrivia(Comment(";"));
+            yield return Helpers.PartialVoidMethod("InitializeSystems", passInSystemInstanceArguments).WithTrailingTrivia(Comment(";"));
 
             // partial dispose methods
             yield return Helpers.PartialVoidMethod("DisposeStores").WithTrailingTrivia(Comment(";"));
             yield return Helpers.PartialVoidMethod("DisposeArchetypes").WithTrailingTrivia(Comment(";"));
             yield return Helpers.PartialVoidMethod("DisposeEntities").WithTrailingTrivia(Comment(";"));
+            yield return Helpers.PartialVoidMethod("DisposeSystems").WithTrailingTrivia(Comment(";"));
         }
     }
 
@@ -376,12 +386,26 @@ public static class WorldGenerator {
 
         static IEnumerable<MemberDeclarationSyntax> GetMembers(GeneratorInfo info) {
             // system instances (if needed)
-            foreach (var system in info.RegisteredSystems) {
+            var systems = info.RegisteredSystemGroups.Where(s => s.RequiresInstance).ToImmutableArray();
+            for (var i = 0; i < systems.Length; i++) {
+                var system = systems[i];
+                yield return Helpers.PrivateField(system.TypeFullName, system.FieldName)
+                    .WithTrailingTrivia(Comment(i == systems.Length - 1 ? "\n" : string.Empty));
             }
 
-            yield return Helpers.PublicVoidMethod("Setup")
+            // system instances initialization
+            yield return Helpers.PartialVoidMethod("InitializeSystems", string.Join(", ", info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"in {s.TypeFullName} {s.FieldName}")))
                 .AddAttributeLists(Helpers.AggressiveInlining)
-                .WithBody(Block());
+                .WithBody(Block(
+                    info.RegisteredSystemGroups.Where(s => s.RequiresInstance).Select(s
+                        => ParseStatement(s.RequiresExternalInstance
+                            ? $"this.{s.FieldName} = {s.FieldName};"
+                            : $"this.{s.FieldName} = new {s.TypeFullName}();"))
+                    ));
+
+            yield return Helpers.PublicVoidMethod("Startup")
+                .AddAttributeLists(Helpers.AggressiveInlining)
+                .WithBody(Block(GetSimpleStatements(info, SystemMethodType.Startup)));
             yield return Helpers.PublicVoidMethod("PreUpdate", "in float delta")
                 .AddAttributeLists(Helpers.AggressiveInlining)
                 .WithBody(Block());
@@ -393,7 +417,16 @@ public static class WorldGenerator {
                 .WithBody(Block());
             yield return Helpers.PublicVoidMethod("Shutdown")
                 .AddAttributeLists(Helpers.AggressiveInlining)
-                .WithBody(Block());
+                .WithBody(Block(GetSimpleStatements(info, SystemMethodType.Shutdown)));
+        }
+    }
+
+    private static IEnumerable<StatementSyntax> GetSimpleStatements(GeneratorInfo info, SystemMethodType type) {
+        if (!info.SystemInvocations.TryGetValue(type, out var systems))
+            yield break;
+
+        foreach (var system in systems) {
+            yield return ParseStatement(system.Invocation());
         }
     }
 

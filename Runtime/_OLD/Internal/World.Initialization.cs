@@ -15,7 +15,7 @@ namespace Xeno {
             InitEntities();
             GrowCapacity_Internal(Constants.DefaultEntityCount);
 
-            Worlds.Add(this);
+            // Worlds.Add(this);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -4,10 +4,11 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Xeno.SourceGenerator.SyntaxReceivers;
 
 namespace Xeno.SourceGenerator;
 
-public static class Extensions
+internal static class Extensions
 {
     public static void Add(this SourceProductionContext context, string hint, CompilationUnitSyntax root) {
         context.AddSource(hint, SourceText.From(root.NormalizeWhitespace().ToFullString(), Encoding.UTF8));
@@ -17,6 +18,18 @@ public static class Extensions
         Ensure.Type(compilation, "Xeno.SystemMethodAttribute", out var systemMethodAttributeType);
         return method.GetAttributes().Any(a => a.AttributeClass?.Equals(systemMethodAttributeType, SymbolEqualityComparer.Default) ?? false)
             && method.Parameters.All(p => p.IsValidEntityParameter() || p.IsValidUniformParameter(compilation) || p.IsValidComponentParameter());
+    }
+
+    public static bool GetSystemAttributeValues(this IMethodSymbol method, Compilation compilation, out SystemMethodType type, out int order) {
+        type = default;
+        order = default;
+
+        Ensure.Type(compilation, "Xeno.SystemMethodAttribute", out var systemMethodAttributeType);
+        var attribute = method.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Equals(systemMethodAttributeType, SymbolEqualityComparer.Default) ?? false);
+        if (attribute == null) return false;
+        type = attribute.ConstructorArguments.ElementAtOrDefault(0).Value is int intv1  ? (SystemMethodType)intv1 : default;
+        order = attribute.ConstructorArguments.ElementAtOrDefault(1).Value is int intv2 ? intv2 : 0;
+        return true;
     }
 
     public static bool IsValidEntityParameter(this IParameterSymbol parameter) {

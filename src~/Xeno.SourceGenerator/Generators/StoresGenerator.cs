@@ -8,8 +8,10 @@ namespace Xeno.SourceGenerator;
 
 using static SyntaxFactory;
 
-public static class StoresGenerator {
+internal static class StoresGenerator {
     public static void Generate(GeneratorInfo info) {
+        if (!Ensure.IsEcsAssembly(info.Compilation)) return;
+
         foreach (var component in info.RegisteredComponents) {
             GenerateStore(info, component);
         }

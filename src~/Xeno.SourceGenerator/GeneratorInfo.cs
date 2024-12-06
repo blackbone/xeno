@@ -2,30 +2,41 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Xeno.SourceGenerator.SyntaxReceivers;
 
 namespace Xeno.SourceGenerator;
 
-public class GeneratorInfo {
+internal class GeneratorInfo {
     public readonly SourceProductionContext Context;
     public readonly Compilation Compilation;
 
-    public readonly ImmutableArray<SystemGroup> RegisteredSystems;
+    public readonly ImmutableArray<SystemGroup> RegisteredSystemGroups;
     public readonly ImmutableArray<Component> RegisteredComponents;
-    public readonly ImmutableArray<UserApiCall> FoundApiCalls;
 
-    public readonly ImmutableArray<Component> AllComponents;
+    public readonly ImmutableDictionary<SystemMethodType, ImmutableArray<System>> SystemInvocations;
 
-    public GeneratorInfo(SourceProductionContext context, Compilation compilation, ImmutableArray<SystemGroup> systems, ImmutableArray<Component> components, ImmutableArray<UserApiCall> apiCalls) {
+
+    public GeneratorInfo(SourceProductionContext context, Compilation compilation, ImmutableArray<SystemGroup> systemGroups, ImmutableArray<Component> components, ImmutableArray<UserApiCall> apiCalls) {
         Context = context;
         Compilation = compilation;
-        RegisteredSystems = systems;
+
+        // declared
+        RegisteredSystemGroups = systemGroups;
         RegisteredComponents = PrepareComponents(compilation, components);
-        FoundApiCalls = apiCalls;
 
-        var componentTypesUsedInSystems = ExtractComponentsFromSystems(compilation, systems);
-        var componentTypesUsedInApiCalls = ExtractComponentsFromSystems(compilation, systems);
+        // computed
+        SystemInvocations = ComputeSystemInvocations();
 
-        AllComponents = RegisteredComponents;
+        var componentTypesUsedInSystems = ExtractComponentsFromSystems(compilation, systemGroups);
+        var componentTypesUsedInApiCalls = ExtractComponentsFromSystems(compilation, systemGroups);
+
+    }
+
+    private ImmutableDictionary<SystemMethodType,ImmutableArray<System>> ComputeSystemInvocations() {
+        return RegisteredSystemGroups
+            .SelectMany(s => s.Systems)
+            .GroupBy(s => s.Type)
+            .ToImmutableDictionary(g => g.Key, g => g.OrderBy(sm => sm.Order).ToImmutableArray());
     }
 
     private static ImmutableArray<Component> PrepareComponents(Compilation compilation, ImmutableArray<Component> components) {

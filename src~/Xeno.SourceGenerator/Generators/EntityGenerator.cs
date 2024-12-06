@@ -8,8 +8,10 @@ namespace Xeno.SourceGenerator;
 
 using static SyntaxFactory;
 
-public static class EntityGenerator {
+internal static class EntityGenerator {
     public static void Generate(GeneratorInfo info) {
+        if (!Ensure.IsEcsAssembly(info.Compilation)) return;
+
         GenerateEntity(info);
         GenerateEntityExtensions(info);
         GenerateInternalExtensions(info);

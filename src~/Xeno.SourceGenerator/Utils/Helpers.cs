@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -9,7 +8,7 @@ namespace Xeno.SourceGenerator;
 
 using static SyntaxFactory;
 
-public class Helpers {
+internal class Helpers {
     public static readonly AttributeListSyntax StructLayoutKind_Sequential = AttributeList().AddAttributes(Attribute(ParseName(nameof(StructLayoutAttribute)), AttributeArgumentList().AddArguments(AttributeArgument(ParseExpression($"{nameof(LayoutKind)}.{nameof(LayoutKind.Sequential)}")))));
     public static readonly AttributeListSyntax AggressiveInlining = AttributeList().AddAttributes(Attribute(ParseName(nameof(MethodImplAttribute)), AttributeArgumentList().AddArguments(AttributeArgument(ParseExpression($"{nameof(MethodImplOptions)}.{nameof(MethodImplOptions.AggressiveInlining)}")))));
 

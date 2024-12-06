@@ -15,8 +15,9 @@ namespace Xeno
         public override string ToString() => $"[{WorldId}|{Id}({Version})]{GetArchetype()}";
 
         private string GetArchetype() {
-            if (!Worlds.TryGet(WorldId, out var world)) return "N/A";
-            return world.entityArchetypes[Id].ToString();
+            // if (!Worlds.TryGet(WorldId, out var world)) return "N/A";
+            // return world.entityArchetypes[Id].ToString();
+            return "";
         }
     }
 }

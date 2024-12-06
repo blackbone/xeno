@@ -9,5 +9,6 @@ using Xeno;
 [assembly:RegisterComponent(typeof(string), 3)]
 
 // register required system types
+[assembly:RegisterSystem(typeof(ECS.Feature1.Feature1StaticSystemGroup))]
 [assembly:RegisterSystem(typeof(ECS.Feature1.Feature1SystemGroup))]
 [assembly:RegisterSystem(typeof(ECS.Feature2.Feature2SystemGroup), true)]

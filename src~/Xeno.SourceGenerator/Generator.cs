@@ -35,8 +35,6 @@ public class Generator : IIncrementalGenerator {
     private static void Generate(SourceProductionContext context, (((Compilation, ImmutableArray<SystemGroup>), ImmutableArray<Component>), ImmutableArray<UserApiCall>) tuple) {
         var (((compilation, systems), components), userApiCalls) = tuple;
 
-        if (!Ensure.IsEcsAssembly(compilation)) return;
-
         var info = new GeneratorInfo(context, compilation,
             systems.Where(v => v != null).ToImmutableArray(),
             components.Where(v => v != null).ToImmutableArray(),

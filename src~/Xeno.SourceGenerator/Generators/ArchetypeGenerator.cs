@@ -11,8 +11,10 @@ namespace Xeno.SourceGenerator;
 
 using static SyntaxFactory;
 
-public static class ArchetypeGenerator {
+internal static class ArchetypeGenerator {
     public static void Generate(GeneratorInfo info) {
+        if (!Ensure.IsEcsAssembly(info.Compilation)) return;
+
         GenerateArchetype(info);
         GenerateArchetypes(info);
     }

@@ -8,10 +8,10 @@ namespace Xeno.SourceGenerator;
 
 using static SyntaxFactory;
 
-public static class ComponentGenerator {
+internal static class ComponentGenerator {
     public static void Generate(GeneratorInfo info) {
-        GenerateExtensions(info);
         GenerateInternalExtensions(info);
+        GenerateExtensions(info);
     }
 
     private static void GenerateExtensions(GeneratorInfo info) {

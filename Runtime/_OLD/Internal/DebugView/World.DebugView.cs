@@ -9,18 +9,18 @@ namespace Xeno {
             private readonly World_Old _worldOld;
             public World_Debug(World_Old worldOld) => _worldOld = worldOld;
 
-            [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
-            public Entity_Debug[] Entities {
-                get {
-                    var entities = new Entity_Debug[_worldOld.entityCount];
-                    int i = 0;
-                    foreach (var e in _worldOld.entities) {
-                        if ((e.Version & AllocatedMask) == 0) continue;
-                        entities[i] = new Entity_Debug(e);
-                    }
-                    return entities;
-                }
-            }
+            // [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
+            // public Entity_Debug[] Entities {
+            //     get {
+            //         var entities = new Entity_Debug[_worldOld.entityCount];
+            //         int i = 0;
+            //         foreach (var e in _worldOld.entities) {
+            //             if ((e.Version & AllocatedMask) == 0) continue;
+            //             entities[i] = new Entity_Debug(e);
+            //         }
+            //         return entities;
+            //     }
+            // }
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
             public List<Archetype> Archetypes {

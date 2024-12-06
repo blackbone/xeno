@@ -13,8 +13,8 @@ namespace Xeno
             get => entityCount;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => Worlds.Remove(this);
+        // [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // public void Dispose() => Worlds.Remove(this);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity_Old CreateEntity() {

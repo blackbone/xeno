@@ -8,8 +8,10 @@ namespace Xeno.SourceGenerator;
 
 using static SyntaxFactory;
 
-public static class FiltersGenerator {
+internal static class FiltersGenerator {
     public static void Generate(GeneratorInfo info) {
+        if (!Ensure.IsEcsAssembly(info.Compilation)) return;
+
         GenerateSet(info);
         GenerateSetReadOnly(info);
 
