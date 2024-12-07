@@ -11,6 +11,7 @@ public sealed partial class TestSystem
     [SystemMethod(SystemMethodType.Startup)] private static void Startup2([Uniform(nameof(entityCountToSpawn))] in int uniform) { }
     [SystemMethod(SystemMethodType.Startup)] private static void Startup3([Uniform(false)] in int uniform) { }
 
+    [With()] [Without()]
     [SystemMethod(SystemMethodType.Update)] private static void Sys1(ref Position position) { }
     [SystemMethod(SystemMethodType.Update)] private static void Sys2(in Entity entity, ref Position position) { }
     [SystemMethod(SystemMethodType.Update)] private static void Sys3([Uniform(true)] in float uniform, ref Position position) { }

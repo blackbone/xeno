@@ -12,7 +12,7 @@ namespace Xeno
     /// Component Info. Static class with all necessary variables.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal static class CI<T>
+    public static class CI<T>
     {
         public static readonly T Default = default;
         public static readonly int Index = ComponentInfo.Index++;
@@ -28,7 +28,7 @@ namespace Xeno
         }
     }
 
-    internal static class CI<T1, T2> {
+    public static class CI<T1, T2> {
         public static BitSetReadOnly Mask;
 
         static CI() {
@@ -42,7 +42,7 @@ namespace Xeno
         }
     }
 
-    internal static class CI<T1, T2, T3> {
+    public static class CI<T1, T2, T3> {
         public static BitSetReadOnly Mask;
 
         static CI() {
@@ -56,7 +56,7 @@ namespace Xeno
         }
     }
 
-    internal static class CI<T1, T2, T3, T4> {
+    public static class CI<T1, T2, T3, T4> {
         public static BitSetReadOnly Mask;
         static CI() {
             var indexJoin = CI<T1>.Index | CI<T2>.Index | CI<T3>.Index | CI<T4>.Index;
