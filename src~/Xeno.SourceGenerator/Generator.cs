@@ -47,5 +47,7 @@ public class Generator : IIncrementalGenerator {
         ComponentGenerator.Generate(info);
         StoresGenerator.Generate(info);
         WorldGenerator.Generate(info);
+
+        UserApiGenerator.Generate(info);
     }
 }

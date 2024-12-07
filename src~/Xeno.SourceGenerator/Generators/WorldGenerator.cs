@@ -453,7 +453,6 @@ internal static class WorldGenerator {
                 )
             .AddMembers(NamespaceDeclaration(ParseName(info.Compilation.AssemblyName ?? string.Empty))
                 .AddMembers(ClassDeclaration("World")
-                    .AddBaseListTypes(SimpleBaseType(ParseTypeName("Xeno.IWorld")))
                     .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword)))
                     .WithMembers(List(members))
                 ));

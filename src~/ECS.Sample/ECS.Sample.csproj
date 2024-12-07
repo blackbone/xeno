@@ -9,6 +9,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ECS.Impl\ECS.Impl.csproj" />
+
+        <ProjectReference Include="..\Xeno.SourceGenerator\Xeno.SourceGenerator.csproj"  OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     </ItemGroup>
 
 </Project>

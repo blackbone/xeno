@@ -66,6 +66,7 @@ internal static class Extensions
     };
 
     private static readonly Dictionary<string, string[]> worldCallNames = new() {
+        { "Create", [null] },           // void Create(in Component c, ...)
         { "Add", [null] },              // void Add(in Component c, ...)
         { "Remove", ["ref"] },          // bool Remove(ref Component c, ...)
         { "Has", [null] },              // void Has(default(Component), ...)

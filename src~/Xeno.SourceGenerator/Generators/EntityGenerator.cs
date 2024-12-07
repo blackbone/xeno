@@ -22,7 +22,6 @@ internal static class EntityGenerator {
             .AddUsings(UsingDirective(ParseName("System.Runtime.InteropServices")))
             .AddMembers(NamespaceDeclaration(ParseName(info.Compilation.AssemblyName ?? string.Empty))
                 .AddMembers(GetEntityDeclarationWithName("Entity")
-                    .AddBaseListTypes(SimpleBaseType(ParseTypeName("Xeno.IEntity")))
                     .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.ReadOnlyKeyword)))
                 ));
 

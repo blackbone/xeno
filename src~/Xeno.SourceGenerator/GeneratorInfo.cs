@@ -15,14 +15,23 @@ internal class GeneratorInfo {
 
     public readonly ImmutableDictionary<SystemMethodType, ImmutableArray<System>> SystemInvocations;
 
+    public readonly ImmutableArray<UserApiCall> UserApiCalls;
 
-    public GeneratorInfo(SourceProductionContext context, Compilation compilation, ImmutableArray<SystemGroup> systemGroups, ImmutableArray<Component> components, ImmutableArray<UserApiCall> apiCalls) {
+
+    public GeneratorInfo(
+        SourceProductionContext context,
+        Compilation compilation,
+        ImmutableArray<SystemGroup> systemGroups,
+        ImmutableArray<Component> components,
+        ImmutableArray<UserApiCall> apiCalls)
+    {
         Context = context;
         Compilation = compilation;
 
         // declared
         RegisteredSystemGroups = systemGroups;
         RegisteredComponents = PrepareComponents(compilation, components);
+        UserApiCalls = apiCalls;
 
         // computed
         SystemInvocations = ComputeSystemInvocations();

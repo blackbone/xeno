@@ -1,3 +1,4 @@
+using ECS.Impl;
 using Xeno;
 
 namespace ECS.Feature1 {
@@ -6,9 +7,7 @@ namespace ECS.Feature1 {
         [SystemMethod(SystemMethodKind.Update, 2)] public void System2(ref Feature1Component1 c1) { }
 
         [SystemMethod(SystemMethodKind.Update, 3)]
-        public void System3(in EntityHandle e) {
-            e.Add(new Feature1Component1());
-            e.Remove(new Feature1Component2());
+        public void System3(in Entity e) {
         }
         [SystemMethod(SystemMethodKind.Shutdown, 1)] public void Shutdown() { }
     }
