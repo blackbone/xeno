@@ -8,7 +8,7 @@ using Xeno.Vendor;
 namespace Xeno
 {
     [StructLayout(LayoutKind.Sequential)]
-    public ref struct BitSet {
+    internal ref struct BitSet {
         internal int indexJoin;
         internal ulong hash;
         internal Span<ulong> data;

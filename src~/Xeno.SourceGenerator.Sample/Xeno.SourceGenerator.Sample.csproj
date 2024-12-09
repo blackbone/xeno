@@ -1,22 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>netstandard2.1</TargetFramework>
         <Nullable>enable</Nullable>
         <RootNamespace>Xeno.SourceGenerator.Sample</RootNamespace>
         <OutputType>Exe</OutputType>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <!-- Native Aot Props-->
-        <PublishAot>true</PublishAot>
-        <OptimizationPreference>Speed</OptimizationPreference>
-        <TrimMode>full</TrimMode>
-        <DebuggerSupport>false</DebuggerSupport>
-        <EventSourceSupport>false</EventSourceSupport>
-        <InvariantGlobalization>true</InvariantGlobalization>
-        <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
-        <StackTraceSupport>false</StackTraceSupport>
-        <UseSystemResourceKeys>true</UseSystemResourceKeys>
-        <Platform>osx-arm64</Platform>
     </PropertyGroup>
 
     <ItemGroup>

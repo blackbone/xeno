@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Xeno {
     [StructLayout(LayoutKind.Sequential)]
-    public readonly struct BitSetReadOnly {
+    internal  readonly struct BitSetReadOnly {
         private static readonly ulong[] emptyUlong = { 0 };
         private static readonly uint[] emptyUInt = { };
 
