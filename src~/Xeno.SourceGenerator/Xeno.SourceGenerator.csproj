@@ -33,6 +33,9 @@
     <ItemGroup>
         <Compile Remove="obj~\**"/>
         <Compile Remove="bin~\**"/>
+        <Compile Include="..\..\Runtime\Attributes\UniformKind.cs">
+          <Link>Utils\UniformKind.cs</Link>
+        </Compile>
     </ItemGroup>
 
     <ItemGroup>

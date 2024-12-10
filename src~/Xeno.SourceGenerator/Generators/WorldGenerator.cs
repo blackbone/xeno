@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -5,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xeno.SourceGenerator.SyntaxReceivers;
+using NotImplementedException = System.NotImplementedException;
 
 namespace Xeno.SourceGenerator;
 
@@ -116,11 +118,12 @@ internal static class WorldGenerator {
                     ParseStatement("entities = new RWEntity[capacity];"),
                     ParseStatement("freeIdsCount = 0;"),
                     ParseStatement("freeIds = Array.Empty<uint>();"),
+
                     ParseStatement("// initializing new entities"),
                     ParseStatement("var span_entities = entities.AsSpan((int)entityCount, (int)capacity);"),
                     ParseStatement("var size = freeIds.Length == 0 ? 1 : freeIds.Length;"),
                     ParseStatement("while (size < freeIdsCount + capacity) size <<= 1;"),
-                    ParseStatement("Array.Resize(ref freeIds, size);"),
+                    ParseStatement("Utils.Resize(ref freeIds, (uint)size);"),
                     ParseStatement("var span_freeIds_c = freeIds.Length - (int)freeIdsCount;"),
                     ParseStatement("var span_freeIds = freeIds.AsSpan((int)freeIdsCount, span_freeIds_c);"),
                     ParseStatement("var freeIdsCount_int = (int)freeIdsCount;"),
@@ -142,16 +145,14 @@ internal static class WorldGenerator {
                 .AddAttributeLists(Helpers.AggressiveInlining)
                 .WithBody(Block(
                     ParseStatement("// entities"),
-                    ParseStatement("var arr = new RWEntity[capacity];"),
-                    ParseStatement("Array.Copy(entities, arr, entities.Length);"),
-                    ParseStatement("entities = arr;"),
+                    ParseStatement("Utils.Resize(ref entities, capacity);"),
 
                     ParseStatement("// initializing new entities"),
                     ParseStatement("var count = capacity - entityCount;"),
                     ParseStatement("var span_entities = entities.AsSpan((int)entityCount, (int)count);"),
                     ParseStatement("var size = freeIds.Length == 0 ? 1 : freeIds.Length;"),
                     ParseStatement("while (size < freeIdsCount + count) size <<= 1;"),
-                    ParseStatement("Array.Resize(ref freeIds, size);"),
+                    ParseStatement("Utils.Resize(ref freeIds, (uint)size);"),
                     ParseStatement("var span_freeIds_c = freeIds.Length - (int)freeIdsCount;"),
                     ParseStatement("var span_freeIds = freeIds.AsSpan((int)freeIdsCount, span_freeIds_c);"),
                     ParseStatement("var freeIdsCount_int = (int)freeIdsCount;"),
@@ -164,24 +165,16 @@ internal static class WorldGenerator {
                         ParseStatement("e.Version = 0;"),
                         ParseStatement("span_freeIds[--span_freeIds_c] = id;"),
                         ParseStatement("freeIdsCount_int++;")
-                        ),
+                    ),
                     ParseStatement("freeIdsCount = (uint)freeIdsCount_int;"),
 
                     ParseStatement("// archetypes"),
-                    ParseStatement("var at = new Archetype[capacity];"),
-                    ParseStatement("Array.Copy(entityArchetypes, at, entityArchetypes.Length);"),
-                    ParseStatement("entityArchetypes = at;"),
-                    ParseStatement("var atiid = new uint[capacity];"),
-                    ParseStatement("Array.Copy(inArchetypeLocalIndices, atiid, inArchetypeLocalIndices.Length);"),
-                    ParseStatement("inArchetypeLocalIndices = atiid;")
+                    ParseStatement("Utils.Resize(ref entityArchetypes, capacity);"),
+                    ParseStatement("Utils.Resize(ref inArchetypeLocalIndices, capacity);")
                 ))
                 .AddBodyStatements(ParseStatement("// components"))
-                .AddBodyStatements(
-                    info.RegisteredComponents.Select(c => Block(
-                        ParseStatement("var storeSparse = new uint[capacity];"),
-                        ParseStatement($"Array.Copy({c.StoreName}.sparse, storeSparse, {c.StoreName}.sparse.Length);"),
-                        ParseStatement($"{c.StoreName}.sparse = storeSparse;"))).ToArray<StatementSyntax>());
-
+                .AddBodyStatements(info.RegisteredComponents.Select(c
+                    => ParseStatement($"Utils.Resize(ref {c.StoreName}.sparse, capacity);")).ToArray());
             // disposer
             yield return Helpers.PartialVoidMethod("DisposeEntities")
                 .AddAttributeLists(Helpers.AggressiveInlining)
@@ -211,7 +204,7 @@ internal static class WorldGenerator {
                     ParseStatement("entityCount++;"),
                     ParseStatement("// add to zero archetype"),
                     ParseStatement("if (zeroArchetype.entitiesCount == zeroArchetype.entities.Length)"),
-                    ParseStatement("Array.Resize(ref zeroArchetype.entities, zeroArchetype.entities.Length << 1);"),
+                    ParseStatement("Utils.Resize(ref zeroArchetype.entities, (uint)zeroArchetype.entities.Length << 1);"),
                     ParseStatement("zeroArchetype.entities[zeroArchetype.entitiesCount] = entity.Id;"),
                     ParseStatement("inArchetypeLocalIndices[entity.Id] = zeroArchetype.entitiesCount;"),
                     ParseStatement("zeroArchetype.entitiesCount++;"),
@@ -228,7 +221,7 @@ internal static class WorldGenerator {
                     ParseStatement("e.Version++;"),
                     ParseStatement("entityCount--;"),
                     ParseStatement("if (freeIdsCount == freeIds.Length)"),
-                    ParseStatement("Array.Resize(ref freeIds, (int)(freeIdsCount << 1));"),
+                    ParseStatement("Utils.Resize(ref freeIds, freeIdsCount << 1);"),
                     ParseStatement("freeIds[freeIdsCount++] = e.Id;")
                 ));
 
@@ -380,17 +373,53 @@ internal static class WorldGenerator {
     }
 
     private static void GenerateSystems(GeneratorInfo info) {
+        // pre-init systems
+        var ns = 0;
+        foreach (var systemGroup in info.RegisteredSystemGroups) {
+            foreach (var system in systemGroup.Systems) {
+                system.Index = ns++;
+            }
+        }
+
         var root = WorldClassWithMembers(info, GetMembers(info));
         info.Context.Add("Xeno/World.Systems.g.cs", root);
         return;
 
         static IEnumerable<MemberDeclarationSyntax> GetMembers(GeneratorInfo info) {
+            // iteration cached fields
+            yield return Helpers.PrivateField("uint[]", "iterationBuffer");
+            yield return Helpers.PrivateField("Archetype", "iterationCurrent");
+            yield return Helpers.PrivateField("uint", "iterationCount");
+
             // system instances (if needed)
             var systems = info.RegisteredSystemGroups.Where(s => s.RequiresInstance).ToImmutableArray();
             for (var i = 0; i < systems.Length; i++) {
                 var system = systems[i];
                 yield return Helpers.PrivateField(system.TypeFullName, system.FieldName)
                     .WithTrailingTrivia(Comment(i == systems.Length - 1 ? "\n" : string.Empty));
+            }
+
+            // unnamed uniforms
+            var uniques = new HashSet<(ITypeSymbol, string)>();
+            foreach (var system in info.SystemInvocations.Values.SelectMany(s => s)) {
+                foreach (var uniform in system.Parameters.Where(p =>
+                             p.IsValidUniformParameter(info.Compilation, out var kind, out var name)
+                             && kind == UniformKind.Named
+                             && !system.Group.SystemGroupGroupType.HasMatchingField(name, p))) {
+                    uniform.IsValidUniformParameter(info.Compilation, out _, out var name);
+                    uniques.Add((uniform.Type, name));
+                }
+            }
+            var uniquesArray = uniques.ToArray();
+            for (var i = 0; i < uniquesArray.Length; i++) {
+                var (type, name) = uniquesArray[i];
+                yield return Helpers.PrivateField(type.ToDisplayString(), $"{name}_{type.ToDisplayString().Replace(".", "_")}")
+                    .WithTrailingTrivia(Comment(i == uniquesArray.Length - 1 ? "\n" : string.Empty));
+            }
+
+            // cachedFilters
+            foreach (var system in info.SystemInvocations.Values.SelectMany(s => s)) {
+                yield return Helpers.PrivateStaticField("FilterReadOnly", system.FilterName, "default");
             }
 
             // system instances initialization
@@ -401,7 +430,8 @@ internal static class WorldGenerator {
                         => ParseStatement(s.RequiresExternalInstance
                             ? $"this.{s.FieldName} = {s.FieldName};"
                             : $"this.{s.FieldName} = new {s.TypeFullName}();"))
-                    ));
+                    ))
+                .WithLeadingTrivia(Comment(" "));
 
             yield return Helpers.PublicVoidMethod("Startup")
                 .AddAttributeLists(Helpers.AggressiveInlining)
@@ -411,7 +441,7 @@ internal static class WorldGenerator {
                 .WithBody(Block());
             yield return Helpers.PublicVoidMethod("Update", "in float delta")
                 .AddAttributeLists(Helpers.AggressiveInlining)
-                .WithBody(Block());
+                .WithBody(Block(GetSimpleStatements(info, SystemMethodType.Update)));
             yield return Helpers.PublicVoidMethod("PostUpdate", "in float delta")
                 .AddAttributeLists(Helpers.AggressiveInlining)
                 .WithBody(Block());
@@ -426,8 +456,91 @@ internal static class WorldGenerator {
             yield break;
 
         foreach (var system in systems) {
-            yield return ParseStatement(system.Invocation());
+            var invocation = GenerateSystemInvocation(system, info);
+            if (invocation != null)
+                foreach (var statement in invocation)
+                    yield return statement;
         }
+    }
+
+    private static IEnumerable<StatementSyntax> GenerateSystemInvocation(System system, GeneratorInfo info) {
+        switch (system.Type) {
+            case SystemMethodType.Startup:
+            case SystemMethodType.Shutdown:
+                return GenerateStartupShutdownSystemInvocation(system, info);
+            case SystemMethodType.PreUpdate:
+            case SystemMethodType.Update:
+            case SystemMethodType.PostUpdate:
+                try {
+                    return GenerateUpdateSystemInvocation(system, info);
+                } catch (Exception e) {
+                    return [EmptyStatement().WithTrailingTrivia(Comment($"/* {e.Message} {e.StackTrace} */"))];
+                }
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private static  IEnumerable<StatementSyntax> GenerateStartupShutdownSystemInvocation(System system, GeneratorInfo info) {
+        if (system.Type is not SystemMethodType.Startup and not SystemMethodType.Shutdown)
+            throw new InvalidOperationException();
+
+        if (!system.Method.Parameters.All(p => p.IsValidUniformParameter(info.Compilation, out var kind, out _) && kind != UniformKind.Delta)) {
+            throw new InvalidOperationException();
+        }
+
+        return SimpleInvocation(system, info);
+    }
+
+    private static IEnumerable<StatementSyntax> GenerateUpdateSystemInvocation(System system, GeneratorInfo info) {
+        if (system.Type is not SystemMethodType.PreUpdate and not SystemMethodType.Update and not SystemMethodType.PostUpdate)
+            throw new InvalidOperationException();
+
+        var entityParameterCount = system.Method.Parameters.Count(p => p.IsValidEntityParameter());
+        var uniformParameterCount = system.Method.Parameters.Count(p => p.IsValidUniformParameter(info.Compilation, out _, out _));
+        var componentParameterCount = system.Method.Parameters.Count(p => p.IsValidComponentParameter());
+
+        if (entityParameterCount + uniformParameterCount + componentParameterCount != system.Method.Parameters.Length)
+            throw new InvalidOperationException();
+
+        // simple invocation
+        if (entityParameterCount == 0 && componentParameterCount == 0)
+            return SimpleInvocation(system, info);
+
+        // entity or component invocations requires iteration
+        return IterateInvocation(system, info);
+    }
+
+    private static IEnumerable<StatementSyntax> SimpleInvocation(System system, GeneratorInfo info) {
+        var parametersString = "";
+        foreach (var parameter in system.Method.Parameters) {
+            parameter.IsValidUniformParameter(info.Compilation, out var kind, out var name);
+            parametersString += parameter.RefKind.ToParameterPrefix();
+            switch (kind) {
+                case UniformKind.Named:
+                    if (system.Group.SystemGroupGroupType.HasMatchingField(name, parameter))
+                        parametersString += $"{system.Group.FieldName}.{name}";
+                    else
+                        parametersString += $"{name}_{parameter.Type.ToDisplayString().Replace(".", "_")}";
+                    break;
+                case UniformKind.None: break;
+            }
+        }
+
+        yield return ParseStatement($"{system.Invocation()}({parametersString});");
+    }
+
+    private static IEnumerable<StatementSyntax> IterateInvocation(System system, GeneratorInfo info) {
+        return [
+            ParseStatement("iterationCount = 0;").WithLeadingTrivia(Comment($"// start of {system.Method.ToDisplayString()}")),
+            ParseStatement("iterationCurrent = archetypes.head;"),
+            ParseStatement("while (iterationCurrent != null)"),
+            Block(
+                ParseStatement($"if (!{system.FilterName}.Match(iterationCurrent.mask)) continue;"),
+                ParseStatement("Array.Copy(iterationCurrent.entities, 0, iterationBuffer, iterationCount, iterationCurrent.entitiesCount);"),
+                ParseStatement("iterationCount += iterationCurrent.entitiesCount;")
+                ).WithTrailingTrivia(Comment($"// end of {system.Method.ToDisplayString()}\n"))
+        ];
     }
 
     private static void GenerateInternalExtensions(GeneratorInfo info) {

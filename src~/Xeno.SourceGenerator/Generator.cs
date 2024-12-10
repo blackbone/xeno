@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Xeno.SourceGenerator;
 
@@ -40,14 +43,19 @@ public class Generator : IIncrementalGenerator {
             components.Where(v => v != null).ToImmutableArray(),
             userApiCalls.Where(v => v != null).ToImmutableArray());
 
-        EntityGenerator.Generate(info);
-        ArchetypeGenerator.Generate(info);
-        FiltersGenerator.Generate(info);
+        try {
+            UtilsGenerator.Generate(info);
+            EntityGenerator.Generate(info);
+            ArchetypeGenerator.Generate(info);
+            FiltersGenerator.Generate(info);
 
-        ComponentGenerator.Generate(info);
-        StoresGenerator.Generate(info);
-        WorldGenerator.Generate(info);
+            ComponentGenerator.Generate(info);
+            StoresGenerator.Generate(info);
+            WorldGenerator.Generate(info);
 
-        UserApiGenerator.Generate(info);
+            UserApiGenerator.Generate(info);
+        } catch (Exception e){
+            context.AddSource("Xeno/_Log.txt", SourceText.From(e.Message + "\n" + e.StackTrace, Encoding.UTF8));
+        }
     }
 }

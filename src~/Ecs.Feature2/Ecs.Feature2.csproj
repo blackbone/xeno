@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Xeno.csproj" />
+      <ProjectReference Include="..\Ecs.Feature1\Ecs.Feature1.csproj" />
+        
+        <ProjectReference Include="..\Xeno.SourceGenerator\Xeno.SourceGenerator.csproj"  OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+    </ItemGroup>
+
+</Project>

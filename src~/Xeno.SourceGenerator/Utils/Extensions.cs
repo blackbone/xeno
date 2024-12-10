@@ -17,7 +17,7 @@ internal static class Extensions
     public static bool IsValidSystemMethod(this IMethodSymbol method, Compilation compilation) {
         Ensure.Type(compilation, "Xeno.SystemMethodAttribute", out var systemMethodAttributeType);
         return method.GetAttributes().Any(a => a.AttributeClass?.Equals(systemMethodAttributeType, SymbolEqualityComparer.Default) ?? false)
-            && method.Parameters.All(p => p.IsValidEntityParameter() || p.IsValidUniformParameter(compilation) || p.IsValidComponentParameter());
+            && method.Parameters.All(p => p.IsValidEntityParameter() || p.IsValidUniformParameter(compilation, out _, out _) || p.IsValidComponentParameter());
     }
 
     public static bool GetSystemAttributeValues(this IMethodSymbol method, Compilation compilation, out SystemMethodType type, out int order) {
@@ -37,15 +37,61 @@ internal static class Extensions
             && parameter.RefKind == RefKind.In;
     }
 
-    public static bool IsValidUniformParameter(this IParameterSymbol parameter, in Compilation compilation) {
+    public static bool IsValidUniformParameter(this IParameterSymbol parameter, in Compilation compilation, out UniformKind kind, out string name) {
         Ensure.Type(compilation, "Xeno.UniformAttribute", out var uniformAttributeType);
-        return parameter.GetAttributes().Any(a => a.AttributeClass?.Equals(uniformAttributeType, SymbolEqualityComparer.Default) ?? false)
-            && parameter.RefKind != RefKind.Out;
+
+        kind = default;
+        name = default;
+
+        if (parameter.RefKind != RefKind.In && parameter.RefKind != RefKind.Ref)
+            return false;
+
+        var attribute = parameter.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Equals(uniformAttributeType, SymbolEqualityComparer.Default) ?? false);
+        if (attribute == null)
+            return false;
+
+        switch (attribute.ConstructorArguments[0].Value) {
+            case bool b:
+                kind = b ? UniformKind.Delta : UniformKind.None;
+                return true;
+            case string s:
+                name = s;
+                kind = UniformKind.Named;
+                return true;
+        }
+
+        return false;
     }
 
     public static bool IsValidComponentParameter(this IParameterSymbol parameter) {
         // can't really check anything in this step
+        // but can check registration
         return parameter.RefKind is RefKind.In or RefKind.Ref;
+    }
+
+    public static bool HasMatchingField(this INamedTypeSymbol namedTypeSymbol, string name, IParameterSymbol parameterSymbol) {
+        var members = namedTypeSymbol.GetMembers(name);
+        if (members.Length == 0)
+            return false;
+
+        var field = members.OfType<IFieldSymbol>().FirstOrDefault();
+        if (field != null) {
+            if (field.DeclaredAccessibility != Accessibility.Public) return false;
+            if (!field.Type.Equals(parameterSymbol.Type, SymbolEqualityComparer.Default)) return false;
+            if (parameterSymbol.RefKind == RefKind.In) return true;
+            return !field.IsReadOnly;
+        }
+
+        var property = members.OfType<IPropertySymbol>().FirstOrDefault();
+        if (property != null) {
+            if (property.DeclaredAccessibility != Accessibility.Public) return false;
+            if (!property.Type.Equals(parameterSymbol.Type, SymbolEqualityComparer.Default)) return false;
+            if (property.GetMethod == null) return false;
+            if (parameterSymbol.RefKind == RefKind.In) return true;
+            return property.RefKind == RefKind.Ref;
+        }
+
+        return false;
     }
 
     public static uint GetPersistentHashCode(this INamedTypeSymbol type, Compilation compilation) {

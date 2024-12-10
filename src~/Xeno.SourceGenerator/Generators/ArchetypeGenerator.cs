@@ -76,7 +76,7 @@ internal static class ArchetypeGenerator {
             yield return Helpers.PrivateReadOnlyField("World", "world");
             yield return Helpers.PrivateField("Archetype[]", "freeArchetypes");
             yield return Helpers.PrivateField("uint", "freeArchetypesCount");
-            yield return Helpers.PrivateField("Archetype", "head")
+            yield return Helpers.InternalField("Archetype", "head")
                 .WithTrailingTrivia(Comment("\n"));
 
             yield return Helpers.PublicConstructor("Archetypes", "in World world")

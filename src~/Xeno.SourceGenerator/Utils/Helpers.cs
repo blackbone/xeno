@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis.CSharp;
@@ -66,8 +68,34 @@ internal class Helpers {
             .WithParameterList(ParseParameterList($"({parameterList ?? string.Empty})"))
             .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)));
 
+    public static MethodDeclarationSyntax InternalStaticMethod(string type, string name, string parameterList = null)
+        => MethodDeclaration(ParseTypeName(type), Identifier(name))
+            .WithParameterList(ParseParameterList($"({parameterList ?? string.Empty})"))
+            .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword), Token(SyntaxKind.StaticKeyword)));
+
+    public static MethodDeclarationSyntax InternalStaticVoidMethod(string name, string parameterList = null)
+        => InternalStaticMethod("void", name, parameterList);
+
+    public static MethodDeclarationSyntax GenericInternalStaticMethod(string type, string name, string typeParameters, string parameterList = null)
+        => MethodDeclaration(ParseTypeName(type), Identifier(name))
+            .WithTypeParameterList(TypeParameterList(SeparatedList(typeParameters.Split(",").Select(s => s.Trim()).Select(TypeParameter))))
+            .WithParameterList(ParseParameterList($"({parameterList ?? string.Empty})"))
+            .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword), Token(SyntaxKind.StaticKeyword)));
+
+    public static MethodDeclarationSyntax GenericInternalStaticVoidMethod(string name, string typeParameters, string parameterList = null)
+        => GenericInternalStaticMethod("void", name, typeParameters, parameterList);
+
     public static MethodDeclarationSyntax InternalVoidMethod(string name, string parameterList = null)
         => InternalMethod("void", name, parameterList);
+
+    public static MethodDeclarationSyntax GenericExtensionMethod(string returnType, string typeArguments, string target, string name, string parameterList = null)
+        => MethodDeclaration(ParseTypeName(returnType), Identifier(name))
+            .WithTypeParameterList(TypeParameterList(SeparatedList(typeArguments.Split(",").Select(TypeParameter).ToArray())))
+            .WithParameterList(ParseParameterList($"(this {target}{(string.IsNullOrEmpty(parameterList) ? "" : $", {parameterList}")})"))
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)));
+
+    public static MethodDeclarationSyntax GenericVoidExtensionMethod(string typeArguments, string target, string name, string parameterList = null)
+        => GenericExtensionMethod("void", typeArguments, target, name, parameterList);
 
     public static MethodDeclarationSyntax ExtensionMethod(string returnType, string target, string name, string parameterList = null)
         => MethodDeclaration(ParseTypeName(returnType), Identifier(name))
@@ -100,6 +128,34 @@ internal class Helpers {
     public static ConstructorDeclarationSyntax PublicConstructor(string name, string parameterList = null) => ConstructorDeclaration(name)
         .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
         .WithParameterList(ParseParameterList($"({parameterList ?? string.Empty})"));
+
+    public static CompilationUnitSyntax StaticClass(string name, IEnumerable<MemberDeclarationSyntax> members, GeneratorInfo info) {
+        return CompilationUnit()
+            .AddUsings(
+                UsingDirective(ParseName("System")),
+                UsingDirective(ParseName("System.Runtime.InteropServices")),
+                UsingDirective(ParseName("System.Runtime.CompilerServices"))
+            )
+            .AddMembers(NamespaceDeclaration(ParseName(info.Compilation.AssemblyName ?? string.Empty))
+                .AddMembers(ClassDeclaration(name)
+                    .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword))
+                    .WithMembers(List(members))
+                ));
+    }
+
+    public static CompilationUnitSyntax InternalStaticClass(string name, IEnumerable<MemberDeclarationSyntax> members, GeneratorInfo info) {
+        return CompilationUnit()
+            .AddUsings(
+                UsingDirective(ParseName("System")),
+                UsingDirective(ParseName("System.Runtime.InteropServices")),
+                UsingDirective(ParseName("System.Runtime.CompilerServices"))
+            )
+            .AddMembers(NamespaceDeclaration(ParseName(info.Compilation.AssemblyName ?? string.Empty))
+                .AddMembers(ClassDeclaration(name)
+                    .AddModifiers(Token(SyntaxKind.InternalKeyword), Token(SyntaxKind.StaticKeyword))
+                    .WithMembers(List(members))
+                ));
+    }
 
     public static CompilationUnitSyntax ExtensionsClass(IEnumerable<MemberDeclarationSyntax> members, GeneratorInfo info) {
         return CompilationUnit()

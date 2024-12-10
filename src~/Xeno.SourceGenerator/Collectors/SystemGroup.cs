@@ -9,6 +9,7 @@ internal sealed class SystemGroup {
     public readonly INamedTypeSymbol SystemGroupGroupType;
     public readonly IEnumerable<System> Systems;
     public readonly bool RequiresExternalInstance;
+
     public bool RequiresInstance => !SystemGroupGroupType.IsStatic && Systems.Any(s => !s.IsStatic);
 
     public string TypeFullName => $"{SystemGroupGroupType.ContainingNamespace}.{SystemGroupGroupType.Name}";
@@ -21,17 +22,11 @@ internal sealed class SystemGroup {
     }
 
     private ImmutableArray<System> ExtractSystems(Compilation compilation) {
+        var result = new List<System>();
         foreach (var systemMethod in SystemGroupGroupType.GetMembers().OfType<IMethodSymbol>().Where(m => m.IsValidSystemMethod(compilation))) {
             systemMethod.GetSystemAttributeValues(compilation, out var type, out var order);
+            result.Add(new System(this, type, order, systemMethod));
         }
-
-        return SystemGroupGroupType.GetMembers()
-            .OfType<IMethodSymbol>()
-            .Where(m => m.IsValidSystemMethod(compilation))
-            .Select(m => {
-                m.GetSystemAttributeValues(compilation, out var type, out var order);
-                return new System(this, type, order, m);
-            })
-            .ToImmutableArray();
+        return result.ToImmutableArray();
     }
 }

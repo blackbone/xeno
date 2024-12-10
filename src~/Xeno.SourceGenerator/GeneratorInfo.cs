@@ -61,7 +61,7 @@ internal class GeneratorInfo {
     private static IEnumerable<ITypeSymbol> ExtractComponentsFromSystems(Compilation compilation, ImmutableArray<SystemGroup> systems) {
         return systems.SelectMany(s => s.Systems)
             .SelectMany(s => s.Parameters)
-            .Where(p => !p.IsValidEntityParameter() && !p.IsValidUniformParameter(compilation))
+            .Where(p => !p.IsValidEntityParameter() && !p.IsValidUniformParameter(compilation, out _, out _))
             .Select(p => p.Type);
     }
 

@@ -19,6 +19,7 @@ internal static class FiltersGenerator {
         GenerateFilterReadOnly(info);
 
         GenerateSetExtensions(info);
+        GenerateFilterExtensions(info);
     }
 
     private static void GenerateSet(GeneratorInfo info) {
@@ -168,6 +169,16 @@ for (var i = 0; i < l; i++, u_i++) {
     }
 }
 return values[..n].ToArray();".Split("\n").Select(s => ParseStatement(s))));
+        }
+    }
+
+    private static void GenerateFilterExtensions(GeneratorInfo info) {
+        var root = StaticClass("FilterExtensions", info, GetMembers());
+        info.Context.Add("Xeno/FilterExtensions.g.cs", root);
+        return;
+
+        IEnumerable<MemberDeclarationSyntax> GetMembers() {
+            yield break;
         }
     }
 

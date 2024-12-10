@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Xeno.SourceGenerator;
 
 public static class SystemCollector {
+
     public static bool Check(SyntaxNode node, CancellationToken cancellationToken) {
         if (node is not AttributeSyntax attributeSyntax) return false;
         if (!attributeSyntax.Name.ToString().Contains("RegisterSystem")) return false;
