@@ -22,5 +22,24 @@ internal static class Ensure
         Type(compilation, "Xeno.EcsAssemblyAttribute", out var ecsAssemblyAttribute);
         return compilation.Assembly.GetAttributes().Any(a => a.AttributeClass.Equals(ecsAssemblyAttribute, SymbolEqualityComparer.Default));
     }
+}
 
+public class Hero {
+    public LivingEntity Entity;
+    public Equipment Equipment;
+    public Abilities Abilities;
+}
+
+public class LivingEntity {
+    public float MaxHp { get; }
+    public float Hp { get; set; }
+    public bool IsDead => Hp <= 0f;
+}
+
+public class Equipment {
+    // тут код шмоток
+}
+
+public class Abilities {
+    // тут код абилок
 }

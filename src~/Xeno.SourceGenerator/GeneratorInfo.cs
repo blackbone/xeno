@@ -9,14 +9,10 @@ namespace Xeno.SourceGenerator;
 internal class GeneratorInfo {
     public readonly SourceProductionContext Context;
     public readonly Compilation Compilation;
-
     public readonly ImmutableArray<SystemGroup> RegisteredSystemGroups;
     public readonly ImmutableArray<Component> RegisteredComponents;
-
     public readonly ImmutableDictionary<SystemMethodType, ImmutableArray<System>> SystemInvocations;
-
     public readonly ImmutableArray<UserApiCall> UserApiCalls;
-
 
     public GeneratorInfo(
         SourceProductionContext context,
@@ -35,10 +31,10 @@ internal class GeneratorInfo {
 
         // computed
         SystemInvocations = ComputeSystemInvocations();
+        PrepareSystems();
 
-        var componentTypesUsedInSystems = ExtractComponentsFromSystems(compilation, systemGroups);
-        var componentTypesUsedInApiCalls = ExtractComponentsFromSystems(compilation, systemGroups);
-
+        // var componentTypesUsedInSystems = ExtractComponentsFromSystems(compilation, systemGroups);
+        // var componentTypesUsedInApiCalls = ExtractComponentsFromSystems(compilation, systemGroups);
     }
 
     private ImmutableDictionary<SystemMethodType,ImmutableArray<System>> ComputeSystemInvocations() {
@@ -63,6 +59,16 @@ internal class GeneratorInfo {
             .SelectMany(s => s.Parameters)
             .Where(p => !p.IsValidEntityParameter() && !p.IsValidUniformParameter(compilation, out _, out _))
             .Select(p => p.Type);
+    }
+
+    private void PrepareSystems() {
+        var filters = new HashSet<Filter>(EqualityComparer<Filter>.Default);
+        foreach (var system in SystemInvocations.Values.SelectMany(s => s)) {
+            system.Method.GetWithAttributeValues(Compilation, out var withTypes);
+            system.Method.GetWithoutAttributeValues(Compilation, out var withoutTypes);
+            system.InitFilter(this, withTypes, withoutTypes);
+            filters.Add(system.Filter);
+        }
     }
 
     private static IEnumerable<ITypeSymbol> ExtractComponentsFromCalls(Compilation compilation, ImmutableArray<UserApiCall> userApiCalls) {

@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xeno.SourceGenerator.SyntaxReceivers;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Xeno.SourceGenerator;
 
@@ -38,8 +37,13 @@ internal static class WorldGenerator {
             yield return Helpers.PrivateField("bool", "isDisposed")
                 .WithTrailingTrivia(Comment("\n"));
 
-            var passInSystemInstanceArguments = string.Join(", ", info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"in {s.TypeFullName} {s.FieldName}"));
-            var passSystemInstanceArguments = string.Join(", ", info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"{s.FieldName}"));
+            var passInSystemInstanceArgs = new List<string>();
+            passInSystemInstanceArgs.AddRange(info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"in {s.TypeFullName} {s.FieldName}"));
+            var passInSystemInstanceArguments = string.Join(", ", passInSystemInstanceArgs);
+
+            var passSystemInstanceArgs = new List<string> { "4096" };
+            passSystemInstanceArgs.AddRange(info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"{s.FieldName}"));
+            var passSystemInstanceArguments = string.Join(", ", passSystemInstanceArgs);
 
             // constructor
             yield return Helpers.PublicConstructor("World", $"in string name, in ushort id {(string.IsNullOrEmpty(passInSystemInstanceArguments) ? "" : $", {passInSystemInstanceArguments}")}")
@@ -50,7 +54,7 @@ internal static class WorldGenerator {
                         .WithTrailingTrivia(Comment("\n")),
                     // TODO: make this constants configurable
                     ParseStatement("InitializeEntities(4096);"),
-                    ParseStatement("InitializeArchetypes(256);"),
+                    ParseStatement("InitializeArchetypes(4096);"),
                     ParseStatement("InitializeStores(4096, 128);"),
                     ParseStatement($"InitializeSystems({passSystemInstanceArguments});")
                 ));
@@ -83,7 +87,7 @@ internal static class WorldGenerator {
             yield return Helpers.PartialVoidMethod("InitializeEntities", "in uint capacity").WithTrailingTrivia(Comment(";"));
             yield return Helpers.PartialVoidMethod("InitializeArchetypes", "in uint capacity").WithTrailingTrivia(Comment(";"));
             yield return Helpers.PartialVoidMethod("InitializeStores", "in uint sparseCapacity, in uint denseCapacity").WithTrailingTrivia(Comment(";"));
-            yield return Helpers.PartialVoidMethod("InitializeSystems", passInSystemInstanceArguments).WithTrailingTrivia(Comment(";"));
+            yield return Helpers.PartialVoidMethod("InitializeSystems", string.Join(", ", passInSystemInstanceArgs.Prepend("in uint capacity"))).WithTrailingTrivia(Comment(";"));
 
             // partial dispose methods
             yield return Helpers.PartialVoidMethod("DisposeStores").WithTrailingTrivia(Comment(";"));
@@ -174,7 +178,8 @@ internal static class WorldGenerator {
                 ))
                 .AddBodyStatements(ParseStatement("// components"))
                 .AddBodyStatements(info.RegisteredComponents.Select(c
-                    => ParseStatement($"Utils.Resize(ref {c.StoreName}.sparse, capacity);")).ToArray());
+                    => ParseStatement($"Utils.Resize(ref {c.StoreName}.sparse, capacity);")).ToArray())
+                .AddBodyStatements(ParseStatement("Utils.Resize(ref iterationBuffer, capacity);"));
             // disposer
             yield return Helpers.PartialVoidMethod("DisposeEntities")
                 .AddAttributeLists(Helpers.AggressiveInlining)
@@ -390,6 +395,8 @@ internal static class WorldGenerator {
             yield return Helpers.PrivateField("uint[]", "iterationBuffer");
             yield return Helpers.PrivateField("Archetype", "iterationCurrent");
             yield return Helpers.PrivateField("uint", "iterationCount");
+            yield return Helpers.PrivateField("int", "iterationI");
+            yield return Helpers.PrivateField("uint", "iterationEid");
 
             // system instances (if needed)
             var systems = info.RegisteredSystemGroups.Where(s => s.RequiresInstance).ToImmutableArray();
@@ -405,7 +412,7 @@ internal static class WorldGenerator {
                 foreach (var uniform in system.Parameters.Where(p =>
                              p.IsValidUniformParameter(info.Compilation, out var kind, out var name)
                              && kind == UniformKind.Named
-                             && !system.Group.SystemGroupGroupType.HasMatchingField(name, p))) {
+                             && !system.Group.SystemGroupGroupType.HasMatchingField(name, p, out _))) {
                     uniform.IsValidUniformParameter(info.Compilation, out _, out var name);
                     uniques.Add((uniform.Type, name));
                 }
@@ -419,18 +426,23 @@ internal static class WorldGenerator {
 
             // cachedFilters
             foreach (var system in info.SystemInvocations.Values.SelectMany(s => s)) {
-                yield return Helpers.PrivateStaticField("FilterReadOnly", system.FilterName, "default");
+                yield return Helpers.PrivateStaticField("FilterReadOnly", system.Filter.FieldName, system.Filter.Initializer);
             }
 
             // system instances initialization
-            yield return Helpers.PartialVoidMethod("InitializeSystems", string.Join(", ", info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"in {s.TypeFullName} {s.FieldName}")))
-                .AddAttributeLists(Helpers.AggressiveInlining)
-                .WithBody(Block(
-                    info.RegisteredSystemGroups.Where(s => s.RequiresInstance).Select(s
-                        => ParseStatement(s.RequiresExternalInstance
-                            ? $"this.{s.FieldName} = {s.FieldName};"
-                            : $"this.{s.FieldName} = new {s.TypeFullName}();"))
-                    ))
+            var passInSystemInstanceArgs = new List<string> { "in uint capacity" };
+            passInSystemInstanceArgs.AddRange(info.RegisteredSystemGroups.Where(s => s.RequiresExternalInstance).Select(s => $"in {s.TypeFullName} {s.FieldName}"));
+            var passInSystemInstanceArguments = string.Join(", ", passInSystemInstanceArgs);
+            yield return Helpers.PartialVoidMethod("InitializeSystems", string.Join(", ", passInSystemInstanceArguments))
+                    .AddAttributeLists(Helpers.AggressiveInlining)
+                    .WithBody(Block()
+                        .AddStatements(
+                            info.RegisteredSystemGroups.Where(s => s.RequiresInstance).Select(s
+                                => ParseStatement(s.RequiresExternalInstance
+                                    ? $"this.{s.FieldName} = {s.FieldName};"
+                                    : $"this.{s.FieldName} = new {s.TypeFullName}();")).ToArray())
+                        .AddStatements(ParseStatement("iterationBuffer = new uint[capacity];"))
+                    )
                 .WithLeadingTrivia(Comment(" "));
 
             yield return Helpers.PublicVoidMethod("Startup")
@@ -498,7 +510,7 @@ internal static class WorldGenerator {
 
         var entityParameterCount = system.Method.Parameters.Count(p => p.IsValidEntityParameter());
         var uniformParameterCount = system.Method.Parameters.Count(p => p.IsValidUniformParameter(info.Compilation, out _, out _));
-        var componentParameterCount = system.Method.Parameters.Count(p => p.IsValidComponentParameter());
+        var componentParameterCount = system.Method.Parameters.Count(p => p.IsValidComponentParameter(info));
 
         if (entityParameterCount + uniformParameterCount + componentParameterCount != system.Method.Parameters.Length)
             throw new InvalidOperationException();
@@ -512,22 +524,7 @@ internal static class WorldGenerator {
     }
 
     private static IEnumerable<StatementSyntax> SimpleInvocation(System system, GeneratorInfo info) {
-        var parametersString = "";
-        foreach (var parameter in system.Method.Parameters) {
-            parameter.IsValidUniformParameter(info.Compilation, out var kind, out var name);
-            parametersString += parameter.RefKind.ToParameterPrefix();
-            switch (kind) {
-                case UniformKind.Named:
-                    if (system.Group.SystemGroupGroupType.HasMatchingField(name, parameter))
-                        parametersString += $"{system.Group.FieldName}.{name}";
-                    else
-                        parametersString += $"{name}_{parameter.Type.ToDisplayString().Replace(".", "_")}";
-                    break;
-                case UniformKind.None: break;
-            }
-        }
-
-        yield return ParseStatement($"{system.Invocation()}({parametersString});");
+        yield return ParseStatement($"{system.Invocation()}({GetArgsString(system, info)});");
     }
 
     private static IEnumerable<StatementSyntax> IterateInvocation(System system, GeneratorInfo info) {
@@ -536,11 +533,47 @@ internal static class WorldGenerator {
             ParseStatement("iterationCurrent = archetypes.head;"),
             ParseStatement("while (iterationCurrent != null)"),
             Block(
-                ParseStatement($"if (!{system.FilterName}.Match(iterationCurrent.mask)) continue;"),
-                ParseStatement("Array.Copy(iterationCurrent.entities, 0, iterationBuffer, iterationCount, iterationCurrent.entitiesCount);"),
-                ParseStatement("iterationCount += iterationCurrent.entitiesCount;")
+                ParseStatement($"if ({system.Filter.FieldName}.Match(iterationCurrent.mask))"),
+                Block(
+                    ParseStatement("Array.Copy(iterationCurrent.entities, 0, iterationBuffer, iterationCount, iterationCurrent.entitiesCount);"),
+                    ParseStatement("iterationCount += iterationCurrent.entitiesCount;")
+                ),
+                ParseStatement("iterationCurrent = iterationCurrent.next;")
+            ),
+            ParseStatement("for (iterationI = 0; iterationI < iterationCount; iterationI++)"),
+            Block(
+                ParseStatement("iterationEid = iterationBuffer[iterationI];"),
+                ParseStatement(system.Invocation() + "(" + GetArgsString(system, info, "iterationEid") + ");")
                 ).WithTrailingTrivia(Comment($"// end of {system.Method.ToDisplayString()}\n"))
         ];
+    }
+
+    private static string GetArgsString(System system, GeneratorInfo info, string eid = null) {
+        var prs = new List<string>();
+        foreach (var parameter in system.Parameters) {
+            if (parameter.IsValidEntityParameter() && !string.IsNullOrEmpty(eid)) prs.Add($"entities[{eid}]");
+            if (parameter.IsValidUniformParameter(info.Compilation, out var kind, out var name)) {
+                switch (kind) {
+                    case UniformKind.Delta: prs.Add($"{parameter.RefKind.ToParameterPrefix()}delta"); break;
+                    case UniformKind.Named:
+                        if (system.Group.SystemGroupGroupType.HasMatchingField(name, parameter, out var isStatic))
+                            prs.Add(isStatic
+                                ? $"{parameter.RefKind.ToParameterPrefix()}{system.Group.TypeFullName}.{name}"
+                                : $"{parameter.RefKind.ToParameterPrefix()}{system.Group.FieldName}.{name}");
+                        else
+                            prs.Add($"{name}_{parameter.Type.ToDisplayString().Replace(".", "_")}");
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            if (parameter.IsValidComponentParameter(info) && !string.IsNullOrEmpty(eid)) {
+                var component = info.RegisteredComponents.FirstOrDefault(rc => rc.Type.Equals(parameter.Type, SymbolEqualityComparer.Default));
+                prs.Add($"{parameter.RefKind.ToParameterPrefix()}{component.StoreName}.data[{component.StoreName}.sparse[{eid}]]");
+            }
+        }
+
+        return string.Join(", ", prs);
     }
 
     private static void GenerateInternalExtensions(GeneratorInfo info) {
@@ -554,6 +587,7 @@ internal static class WorldGenerator {
                 .WithBody(Block(
                     ParseStatement("return world != null ? (world.Name, world.Id) : (default, default);")
                 ));
+
         }
     }
 

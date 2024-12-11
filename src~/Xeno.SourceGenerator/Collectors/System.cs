@@ -1,33 +1,37 @@
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Xeno.SourceGenerator.SyntaxReceivers;
 
 namespace Xeno.SourceGenerator;
 
-internal sealed class System(SystemGroup group, SystemMethodType type, int order, IMethodSymbol method) {
-    public readonly SystemGroup Group = group;
-    public readonly SystemMethodType Type = type;
-    public readonly int Order = order;
-    public readonly IMethodSymbol Method = method;
-    public readonly bool IsStatic = method.IsStatic;
-    public readonly ImmutableArray<IParameterSymbol> Parameters = method.Parameters;
+internal sealed class System {
+    public readonly SystemGroup Group;
+    public readonly SystemMethodType Type;
+    public readonly int Order;
+    public readonly IMethodSymbol Method;
+    public readonly bool IsStatic;
+    public readonly ImmutableArray<IParameterSymbol> Parameters;
+    public Filter Filter;
 
     public int Index;
+    public System(SystemGroup group, SystemMethodType type, int order, IMethodSymbol method) {
+        Group = group;
+        Type = type;
+        Order = order;
+        Method = method;
+        IsStatic = method.IsStatic;
+        Parameters = method.Parameters;
+    }
 
-    public string FilterName => $"filter_{Index}";
+    public void InitFilter(GeneratorInfo info, ImmutableArray<ITypeSymbol> with, ImmutableArray<ITypeSymbol> without) {
+        var usedComponents = Parameters
+            .Where(p => p.IsValidComponentParameter(info))
+            .Select(p => p.Type);
+        Filter = new Filter(info, with.AddRange(usedComponents), without);
+    }
 
     public string Invocation() => IsStatic
         ? $"{Group.TypeFullName}.{Method.Name}"
         : $"{Group.FieldName}.{Method.Name}";
-
-    private string GetParametersString() {
-        var result = "";
-        foreach (var parameter in Method.Parameters) {
-            if (parameter.RefKind == RefKind.Ref)
-                result += "ref ";
-            else if (parameter.RefKind == RefKind.Out)
-                result += "out ";
-        }
-        return result;
-    }
 }

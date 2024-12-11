@@ -169,6 +169,10 @@ for (var i = 0; i < l; i++, u_i++) {
     }
 }
 return values[..n].ToArray();".Split("\n").Select(s => ParseStatement(s))));
+
+            yield return Helpers.ExtensionMethod("bool", "in SetReadOnly set", "Match", "in SetReadOnly mask")
+                .AddAttributeLists(Helpers.AggressiveInlining)
+                .WithBody(Block(ParseStatement("return set.hash == mask.hash && set.indexJoin == mask.indexJoin;")));
         }
     }
 
@@ -178,7 +182,9 @@ return values[..n].ToArray();".Split("\n").Select(s => ParseStatement(s))));
         return;
 
         IEnumerable<MemberDeclarationSyntax> GetMembers() {
-            yield break;
+            yield return Helpers.ExtensionMethod("bool", "ref FilterReadOnly filter", "Match", "in SetReadOnly mask")
+                .AddAttributeLists(Helpers.AggressiveInlining)
+                .WithBody(Block(ParseStatement("return filter.with.Match(mask) && !filter.without.Match(mask);")));
         }
     }
 

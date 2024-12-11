@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -20,16 +21,35 @@ internal static class Extensions
             && method.Parameters.All(p => p.IsValidEntityParameter() || p.IsValidUniformParameter(compilation, out _, out _) || p.IsValidComponentParameter());
     }
 
-    public static bool GetSystemAttributeValues(this IMethodSymbol method, Compilation compilation, out SystemMethodType type, out int order) {
+    public static void GetSystemAttributeValues(this IMethodSymbol method, Compilation compilation, out SystemMethodType type, out int order) {
         type = default;
         order = default;
 
         Ensure.Type(compilation, "Xeno.SystemMethodAttribute", out var systemMethodAttributeType);
         var attribute = method.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Equals(systemMethodAttributeType, SymbolEqualityComparer.Default) ?? false);
-        if (attribute == null) return false;
+        if (attribute == null) return;
         type = attribute.ConstructorArguments.ElementAtOrDefault(0).Value is int intv1  ? (SystemMethodType)intv1 : default;
         order = attribute.ConstructorArguments.ElementAtOrDefault(1).Value is int intv2 ? intv2 : 0;
-        return true;
+    }
+
+    public static void GetWithAttributeValues(this IMethodSymbol method, Compilation compilation, out ImmutableArray<ITypeSymbol> withTypes) {
+        withTypes = ImmutableArray<ITypeSymbol>.Empty;
+        Ensure.Type(compilation, "Xeno.WithAttribute", out var attributeType);
+        var attribute = method.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Equals(attributeType, SymbolEqualityComparer.Default) ?? false);
+        if (attribute == null) return;
+
+        var args = attribute.ConstructorArguments;
+        withTypes = args[0].Values.Select(v => v.Value).Cast<ITypeSymbol>().ToImmutableArray();
+    }
+
+    public static void GetWithoutAttributeValues(this IMethodSymbol method, Compilation compilation, out ImmutableArray<ITypeSymbol> withoutTypes) {
+        withoutTypes = ImmutableArray<ITypeSymbol>.Empty;
+        Ensure.Type(compilation, "Xeno.WithoutAttribute", out var attributeType);
+        var attribute = method.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Equals(attributeType, SymbolEqualityComparer.Default) ?? false);
+        if (attribute == null) return;
+
+        var args = attribute.ConstructorArguments;
+        withoutTypes = args[0].Values.Select(v => v.Value).Cast<ITypeSymbol>().ToImmutableArray();
     }
 
     public static bool IsValidEntityParameter(this IParameterSymbol parameter) {
@@ -63,13 +83,18 @@ internal static class Extensions
         return false;
     }
 
-    public static bool IsValidComponentParameter(this IParameterSymbol parameter) {
-        // can't really check anything in this step
-        // but can check registration
+    public static bool IsValidComponentParameter(this IParameterSymbol parameter, GeneratorInfo info = null) {
+        if (parameter.IsValidEntityParameter())
+            return false;
+        if (info != null && parameter.IsValidUniformParameter(info.Compilation, out _, out _))
+            return false;
+        if (info != null && info.RegisteredComponents.All(c => !c.Type.Equals(parameter.Type, SymbolEqualityComparer.Default)))
+            return false;
         return parameter.RefKind is RefKind.In or RefKind.Ref;
     }
 
-    public static bool HasMatchingField(this INamedTypeSymbol namedTypeSymbol, string name, IParameterSymbol parameterSymbol) {
+    public static bool HasMatchingField(this INamedTypeSymbol namedTypeSymbol, string name, IParameterSymbol parameterSymbol, out bool isStatic) {
+        isStatic = false;
         var members = namedTypeSymbol.GetMembers(name);
         if (members.Length == 0)
             return false;
@@ -78,6 +103,7 @@ internal static class Extensions
         if (field != null) {
             if (field.DeclaredAccessibility != Accessibility.Public) return false;
             if (!field.Type.Equals(parameterSymbol.Type, SymbolEqualityComparer.Default)) return false;
+            isStatic = field.IsStatic;
             if (parameterSymbol.RefKind == RefKind.In) return true;
             return !field.IsReadOnly;
         }
@@ -87,6 +113,7 @@ internal static class Extensions
             if (property.DeclaredAccessibility != Accessibility.Public) return false;
             if (!property.Type.Equals(parameterSymbol.Type, SymbolEqualityComparer.Default)) return false;
             if (property.GetMethod == null) return false;
+            isStatic = property.IsStatic;
             if (parameterSymbol.RefKind == RefKind.In) return true;
             return property.RefKind == RefKind.Ref;
         }

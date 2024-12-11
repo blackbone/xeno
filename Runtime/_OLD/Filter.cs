@@ -50,18 +50,6 @@ namespace Xeno {
     }
 
     static class Usage {
-        static void Foo() {
-            // add 1, 10, 100
-            // exclude 20, 80
-
-            var filter = new Filter(
-                stackalloc ulong[] { 1ul << 1, 1ul << 2, 1ul << 3 },
-                1 | 2 | 3,
-                stackalloc ulong[] { 1ul << 4, 1ul << 5, 1ul << 6 },
-                4 | 5 | 6
-                );
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void FinalizeHash(this ref Set set) {
             switch (set.data.Length) {

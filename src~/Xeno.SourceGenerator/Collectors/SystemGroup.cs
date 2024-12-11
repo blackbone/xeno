@@ -6,19 +6,23 @@ using Microsoft.CodeAnalysis;
 namespace Xeno.SourceGenerator;
 
 internal sealed class SystemGroup {
+    private static int N;
+    
     public readonly INamedTypeSymbol SystemGroupGroupType;
     public readonly IEnumerable<System> Systems;
+    public readonly bool RequiresInstance;
     public readonly bool RequiresExternalInstance;
+    public readonly string TypeFullName;
+    public readonly string FieldName;
 
-    public bool RequiresInstance => !SystemGroupGroupType.IsStatic && Systems.Any(s => !s.IsStatic);
-
-    public string TypeFullName => $"{SystemGroupGroupType.ContainingNamespace}.{SystemGroupGroupType.Name}";
-    public string FieldName => $"sys_{TypeFullName.GetHashCode():X}";
 
     public SystemGroup(Compilation compilation, INamedTypeSymbol systemGroupType, bool requiresExternalInstance) {
         SystemGroupGroupType = systemGroupType;
         Systems = ExtractSystems(compilation);
+        RequiresInstance = !SystemGroupGroupType.IsStatic && Systems.Any(s => !s.IsStatic);
         RequiresExternalInstance = requiresExternalInstance && RequiresInstance;
+        TypeFullName = $"{SystemGroupGroupType.ContainingNamespace}.{SystemGroupGroupType.Name}";
+        FieldName = $"sys_{TypeFullName.GetHashCode() + N++:X}";
     }
 
     private ImmutableArray<System> ExtractSystems(Compilation compilation) {
