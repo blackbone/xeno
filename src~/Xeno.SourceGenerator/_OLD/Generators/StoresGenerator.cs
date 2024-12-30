@@ -23,7 +23,7 @@ internal static class StoresGenerator {
             .AddMembers(NamespaceDeclaration(ParseName(info.Compilation.AssemblyName ?? string.Empty))
                 .AddMembers(StructDeclaration(component.StoreTypeName)
                     .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
-                    .WithAttributeLists(List([Helpers.StructLayoutKind_Sequential]))
+                    .WithAttributeLists(List(new [] {Helpers.StructLayoutKind_Sequential}))
                     .AddMembers(
                         Helpers.InternalField("uint", "count"),
                         Helpers.InternalField("uint[]", "sparse"),

@@ -9,7 +9,7 @@
         <AssemblyName>Xeno</AssemblyName>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.1.6</PackageVersion>
+        <PackageVersion>0.2.0</PackageVersion>
         <Title>General purpose ECS</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides bare bones ECS to get basic stuff.</Description>

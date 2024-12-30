@@ -5,7 +5,7 @@ namespace Xeno {
     /// Mark required type to allow code generation for that type as component type.
     /// </summary>
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-    public sealed class RegisterSystemAttribute : Attribute {
-        public RegisterSystemAttribute(Type type, bool requiresInstance = false) { }
+    public sealed class RegisterSystemGroupAttribute : Attribute {
+        public RegisterSystemGroupAttribute(Type type, bool requiresInstance = false) { }
     }
 }

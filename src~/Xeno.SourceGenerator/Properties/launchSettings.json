@@ -1,7 +1,15 @@
 ﻿{
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "DebugRoslynSourceGenerator": {
+    "SG-Feature1": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../ECS.Feature1/ECS.Feature1.csproj"
+    },
+    "SG-Feature2": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../ECS.Feature2/ECS.Feature2.csproj"
+    },
+    "SG-Impl": {
       "commandName": "DebugRoslynComponent",
       "targetProject": "../ECS.Impl/ECS.Impl.csproj"
     }

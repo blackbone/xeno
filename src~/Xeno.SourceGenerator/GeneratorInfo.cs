@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using Xeno.SourceGenerator.SyntaxReceivers;
 
 namespace Xeno.SourceGenerator;
 
@@ -11,15 +10,13 @@ internal class GeneratorInfo {
     public readonly Compilation Compilation;
     public readonly ImmutableArray<SystemGroup> RegisteredSystemGroups;
     public readonly ImmutableArray<Component> RegisteredComponents;
-    public readonly ImmutableDictionary<SystemMethodType, ImmutableArray<System>> SystemInvocations;
-    public readonly ImmutableArray<UserApiCall> UserApiCalls;
+    public readonly ImmutableDictionary<SystemType, ImmutableArray<System>> SystemInvocations;
 
     public GeneratorInfo(
         SourceProductionContext context,
         Compilation compilation,
         ImmutableArray<SystemGroup> systemGroups,
-        ImmutableArray<Component> components,
-        ImmutableArray<UserApiCall> apiCalls)
+        ImmutableArray<Component> components)
     {
         Context = context;
         Compilation = compilation;
@@ -27,17 +24,13 @@ internal class GeneratorInfo {
         // declared
         RegisteredSystemGroups = systemGroups;
         RegisteredComponents = PrepareComponents(compilation, components);
-        UserApiCalls = apiCalls;
 
         // computed
         SystemInvocations = ComputeSystemInvocations();
         PrepareSystems();
-
-        // var componentTypesUsedInSystems = ExtractComponentsFromSystems(compilation, systemGroups);
-        // var componentTypesUsedInApiCalls = ExtractComponentsFromSystems(compilation, systemGroups);
     }
 
-    private ImmutableDictionary<SystemMethodType,ImmutableArray<System>> ComputeSystemInvocations() {
+    private ImmutableDictionary<SystemType, ImmutableArray<System>> ComputeSystemInvocations() {
         return RegisteredSystemGroups
             .SelectMany(s => s.Systems)
             .GroupBy(s => s.Type)
@@ -45,11 +38,11 @@ internal class GeneratorInfo {
     }
 
     private static ImmutableArray<Component> PrepareComponents(Compilation compilation, ImmutableArray<Component> components) {
-        components = components.OrderBy(c => c.Priority ?? int.MaxValue).ToImmutableArray();
-        for (var i = 0; i < components.Length; i++) {
-            components[i].Index = i;
-            components[i].PersistentId = components[i].Type.GetPersistentHashCode(compilation);
-        }
+        components = components.OrderBy(c => c.Order).ToImmutableArray();
+        // for (var i = 0; i < components.Length; i++) {
+        //     components[i].Index = i;
+        //     components[i].PersistentId = components[i].Type.GetPersistentHashCode(compilation);
+        // }
 
         return components;
     }
@@ -63,18 +56,11 @@ internal class GeneratorInfo {
 
     private void PrepareSystems() {
         var filters = new HashSet<Filter>(EqualityComparer<Filter>.Default);
-        foreach (var system in SystemInvocations.Values.SelectMany(s => s)) {
-            system.Method.GetWithAttributeValues(Compilation, out var withTypes);
-            system.Method.GetWithoutAttributeValues(Compilation, out var withoutTypes);
-            system.InitFilter(this, withTypes, withoutTypes);
-            filters.Add(system.Filter);
-        }
-    }
-
-    private static IEnumerable<ITypeSymbol> ExtractComponentsFromCalls(Compilation compilation, ImmutableArray<UserApiCall> userApiCalls) {
-        // return userApiCalls.SelectMany(c => c.MethodSyntax.Parameters)
-        //     .Where(p => !p.IsValidEntityParameter(compilation) && !p.IsValidUniformParameter(compilation))
-        //     .Select(p => p.Type);
-        yield break;
+        // foreach (var system in SystemInvocations.Values.SelectMany(s => s)) {
+        //     system.Method.GetWithAttributeValues(Compilation, out var withTypes);
+        //     system.Method.GetWithoutAttributeValues(Compilation, out var withoutTypes);
+        //     system.InitFilter(this, withTypes, withoutTypes);
+        //     filters.Add(system.Filter);
+        // }
     }
 }

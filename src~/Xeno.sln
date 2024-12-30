@@ -8,7 +8,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Generator", "Generator", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xeno.Tests", "Xeno.Tests\Xeno.Tests.csproj", "{E0337C32-5ADF-4B0A-9556-91FE1FB32E89}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECS.Impl", "ECS.Impl\ECS.Impl.csproj", "{F66EC799-A4ED-4D63-9DF0-CD772D7798FD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ecs.Impl", "Ecs.Impl\Ecs.Impl.csproj", "{F66EC799-A4ED-4D63-9DF0-CD772D7798FD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECS.Sample", "ECS.Sample\ECS.Sample.csproj", "{9EAE1DCD-C408-441B-ABD7-369B7215921C}"
 EndProject

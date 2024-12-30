@@ -3,7 +3,7 @@
     <PropertyGroup>
         <IsPackable>true</IsPackable>
         <Nullable>disable</Nullable>
-        <LangVersion>latest</LangVersion>
+        <LangVersion>10</LangVersion>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IsRoslynComponent>true</IsRoslynComponent>
         <RootNamespace>Xeno.SourceGenerator</RootNamespace>
@@ -18,7 +18,7 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageTags>ecs dotnet unity source generator</PackageTags>
-        <TargetFrameworks>net8.0;netstandard2.1</TargetFrameworks>
+        <TargetFramework>netstandard2.1</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -33,6 +33,9 @@
     <ItemGroup>
         <Compile Remove="obj~\**"/>
         <Compile Remove="bin~\**"/>
+        <Compile Include="..\..\Runtime\Attributes\SystemMethodKind.cs">
+          <Link>Info\SystemMethodKind.cs</Link>
+        </Compile>
         <Compile Include="..\..\Runtime\Attributes\UniformKind.cs">
           <Link>Utils\UniformKind.cs</Link>
         </Compile>

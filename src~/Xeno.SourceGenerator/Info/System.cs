@@ -1,21 +1,20 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using Xeno.SourceGenerator.SyntaxReceivers;
 
 namespace Xeno.SourceGenerator;
 
 internal sealed class System {
     public readonly SystemGroup Group;
-    public readonly SystemMethodType Type;
+    public readonly SystemType Type;
     public readonly int Order;
     public readonly IMethodSymbol Method;
     public readonly bool IsStatic;
     public readonly ImmutableArray<IParameterSymbol> Parameters;
+
     public Filter Filter;
 
-    public int Index;
-    public System(SystemGroup group, SystemMethodType type, int order, IMethodSymbol method) {
+    public System(SystemGroup group, SystemType type, int order, IMethodSymbol method) {
         Group = group;
         Type = type;
         Order = order;
@@ -24,11 +23,14 @@ internal sealed class System {
         Parameters = method.Parameters;
     }
 
-    public void InitFilter(GeneratorInfo info, ImmutableArray<ITypeSymbol> with, ImmutableArray<ITypeSymbol> without) {
+    public void Init(Generation generation, ImmutableArray<ITypeSymbol> with, ImmutableArray<ITypeSymbol> without) {
         var usedComponents = Parameters
-            .Where(p => p.IsValidComponentParameter(info))
+            .Where(p => p.IsValidComponentParameter(generation.Compilation, generation.AssemblyInfo.Components))
             .Select(p => p.Type);
-        Filter = new Filter(info, with.AddRange(usedComponents), without);
+
+        with = with.AddRange(usedComponents);
+        if (!with.IsEmpty || !without.IsEmpty)
+            Filter = new Filter(generation, with, without);
     }
 
     public string Invocation() => IsStatic

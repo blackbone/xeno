@@ -1,5 +1,5 @@
 namespace Xeno {
-    public enum SystemMethodKind
+    public enum SystemType
     {
         Startup,
         PreUpdate,

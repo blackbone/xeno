@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Xeno.SourceGenerator.Utils;
 
 namespace Xeno.SourceGenerator;
 
@@ -34,14 +35,14 @@ internal static class ArchetypeGenerator {
         static IEnumerable<MemberDeclarationSyntax> GetMembers() {
             yield return Helpers.PrivateReadOnlyField("World", "world");
             yield return Helpers.PrivateReadOnlyField("bool", "floating")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.InternalField("SetReadOnly", "mask");
             yield return Helpers.InternalField("uint[]", "entities");
             yield return Helpers.InternalField("uint", "entitiesCount");
             yield return Helpers.InternalField("Archetype", "prev");
             yield return Helpers.InternalField("Archetype", "next")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.PublicConstructor("Archetype", "in bool floating, in World world")
                 .WithBody(Block(
@@ -77,7 +78,7 @@ internal static class ArchetypeGenerator {
             yield return Helpers.PrivateField("Archetype[]", "freeArchetypes");
             yield return Helpers.PrivateField("uint", "freeArchetypesCount");
             yield return Helpers.InternalField("Archetype", "head")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.PublicConstructor("Archetypes", "in World world")
                 .AddAttributeLists(Helpers.AggressiveInlining)

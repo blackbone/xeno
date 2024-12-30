@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Xeno.SourceGenerator.Utils;
 
 namespace Xeno.SourceGenerator;
 
@@ -31,7 +32,7 @@ internal static class FiltersGenerator {
             yield return Helpers.InternalField("uint", "indexJoin");
             yield return Helpers.InternalField("ulong", "hash");
             yield return Helpers.InternalField("Span<ulong>", "data")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.PublicConstructor("Set", "in Span<ulong> data, in uint join")
                 .AddAttributeLists(Helpers.AggressiveInlining)
@@ -52,16 +53,16 @@ internal static class FiltersGenerator {
         IEnumerable<MemberDeclarationSyntax> GetMembers() {
             yield return Helpers.PrivateStaticReadOnlyField("ulong[]", "emptyUlong", "{ 0 }");
             yield return Helpers.PrivateStaticReadOnlyField("uint[]", "emptyUInt", "{}")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.PublicStaticField("SetReadOnly", "Zero", "new SetReadOnly(0)")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.InternalReadOnlyField("uint", "indexJoin");
             yield return Helpers.InternalReadOnlyField("ulong", "hash");
             yield return Helpers.InternalReadOnlyField("ulong[]", "data");
             yield return Helpers.InternalReadOnlyField("uint[]", "indices")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.PrivateConstructor("SetReadOnly", "int _")
                 .AddAttributeLists(Helpers.AggressiveInlining)
@@ -92,7 +93,7 @@ internal static class FiltersGenerator {
         IEnumerable<MemberDeclarationSyntax> GetMembers() {
             yield return Helpers.PublicField("Set", "with");
             yield return Helpers.PublicField("Set", "without")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.PublicConstructor("Filter", "in Span<ulong> withData, in uint withJoin, in Span<ulong> withoutData, in uint withoutJoin")
                 .AddAttributeLists(Helpers.AggressiveInlining)
@@ -115,7 +116,7 @@ internal static class FiltersGenerator {
         IEnumerable<MemberDeclarationSyntax> GetMembers() {
             yield return Helpers.PublicReadOnlyField("SetReadOnly", "with");
             yield return Helpers.PublicReadOnlyField("SetReadOnly", "without")
-                .WithTrailingTrivia(Comment("\n"));
+                .Line();
 
             yield return Helpers.PublicConstructor("FilterReadOnly", "ref Filter filter")
                 .AddAttributeLists(Helpers.AggressiveInlining)
