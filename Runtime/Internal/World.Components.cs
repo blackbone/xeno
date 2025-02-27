@@ -342,7 +342,7 @@ namespace Xeno {
             if (entityId >= s.sparse.Length) return false;
 
             var d = s.sparse[entityId];
-            return d < s.count && s.dense[entityId] == entityId;
+            return d < s.count && s.dense[d] == entityId;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
