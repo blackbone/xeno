@@ -18,9 +18,9 @@ namespace Xeno {
             public uint EntitiesCount => _archetype.entitiesCount;
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
-            public RWEntity[] Entities {
+            public Entity[] Entities {
                 get {
-                    var result = new RWEntity[EntitiesCount];
+                    var result = new Entity[EntitiesCount];
                     for (int i = 0; i < _archetype.entitiesCount; i++) {
                         result[i] = _world.entities[_archetype.entities[i]];
                     }

@@ -1,14 +1,12 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Xeno;
 
 // ReSharper disable BadChildStatementIndent
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
 namespace Xeno {
     public sealed partial class World { // this part class is work with component data, not more or less
-        internal Store[] stores;
+        public Store[] stores;
         private uint storeCapacity;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -21,7 +21,7 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GrowCapacity_Internal(in uint capacity) {
             // entities
-            var arr = new RWEntity[capacity];
+            var arr = new Entity[capacity];
             Array.Copy(entities, arr, entities.Length);
             entities = arr;
 
@@ -45,6 +45,9 @@ namespace Xeno {
                 Array.Copy(s.sparse, ss, s.sparse.Length);
                 s.sparse = ss;
             }
+
+            // buffer
+            Array.Resize(ref buffer, (int)capacity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

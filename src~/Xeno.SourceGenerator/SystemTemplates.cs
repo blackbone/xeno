@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 #pragma warning disable RS1024
@@ -25,13 +25,15 @@ namespace Xeno.SourceGenerator
         {
             return CSharpSyntaxTree.ParseText($@"
 using Xeno;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace {ns}
 {{
     public partial class {systemName}{(genericArgs.Length > 0 ? $"<{string.Join(", ", genericArgs)}>" : "")} : global::Xeno.System
     {{
+        {PlaceUsedStoreVariables(systemMethods.SelectMany(kv => kv.Value))}
         {PlaceUniforms(systemMethods.SelectMany(kv => kv.Value))}
-        {PlaceDelegates(systemMethods.Where(g => g.Key != (int)SystemMethodType.Startup && g.Key != (int)SystemMethodType.Shutdown).SelectMany(kv => kv.Value))}
         
         protected override bool IsWorldStartSystem => {(systemMethods.ContainsKey((int)SystemMethodType.Startup) ? "true" : "false")};
         protected override bool IsPreUpdateSystem => {(systemMethods.ContainsKey((int)SystemMethodType.PreUpdate) ? "true" : "false")};
@@ -39,34 +41,46 @@ namespace {ns}
         protected override bool IsPostUpdateSystem => {(systemMethods.ContainsKey((int)SystemMethodType.PostUpdate) ? "true" : "false")};
         protected override bool IsWordStopSystem => {(systemMethods.ContainsKey((int)SystemMethodType.Shutdown) ? "true" : "false")};
 
-        public {systemName}()
-        {{
-            {PlaceDelegateInitializers(systemMethods.Where(g => g.Key != (int)SystemMethodType.Startup && g.Key != (int)SystemMethodType.Shutdown).SelectMany(kv => kv.Value))}
-        }}
-
-        protected override void Start()
+        [SkipLocalsInit]
+        protected unsafe override void Start()
         {{
             {PlaceOrderedCalls(systemMethods.GetValueOrDefault((int)SystemMethodType.Startup))}
         }}
 
-        protected override void PreUpdate(in float delta)
+        [SkipLocalsInit]
+        protected unsafe override void PreUpdate(in float delta)
         {{
             {PlaceOrderedCalls(systemMethods.GetValueOrDefault((int)SystemMethodType.PreUpdate))}
         }}
 
-        protected override void Update(in float delta)
+        [SkipLocalsInit]
+        protected unsafe override void Update(in float delta)
         {{
             {PlaceOrderedCalls(systemMethods.GetValueOrDefault((int)SystemMethodType.Update))}
         }}
 
-        protected override void PostUpdate(in float delta)
+        [SkipLocalsInit]
+        protected unsafe override void PostUpdate(in float delta)
         {{
             {PlaceOrderedCalls(systemMethods.GetValueOrDefault((int)SystemMethodType.PostUpdate))}
         }}
 
-        protected override void Stop()
+        [SkipLocalsInit]
+        protected unsafe override void Stop()
         {{
             {PlaceOrderedCalls(systemMethods.GetValueOrDefault((int)SystemMethodType.Shutdown))}
+        }}
+
+        [SkipLocalsInit]
+        protected override void OnAfterAttachToWorld()
+        {{
+            {PlaceStoresInitializers(systemMethods.SelectMany(kv => kv.Value))}
+        }}
+
+        [SkipLocalsInit]
+        protected override void OnBeforeDetachFromWorld()
+        {{
+            {PlaceStoresDeinitializers(systemMethods.SelectMany(kv => kv.Value))}
         }}
     }}
 }}
@@ -83,10 +97,25 @@ namespace {ns}
 
             var sb = new StringBuilder();
             systemMethods.Sort((a, b) => a.order - b.order);
+            var usedComponentTypes = systemMethods.Select(v => v.method)
+                .SelectMany(m => m.Parameters)
+                .Where(p => p.IsComponentParameter())
+                .Select(p => p.Type)
+                .Distinct();
+
+            foreach (var componentParameter in usedComponentTypes) {
+                var name = componentParameter.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"fixed({name}* d{name.GetHashCode():X8} = &_s_{name.GetHashCode():X8}.data[0])");
+                sb.AppendLine($"fixed(uint* s{name.GetHashCode():X8} = &_s_{name.GetHashCode():X8}.sparse[0])");
+            }
+
+            sb.AppendLine("{");
 
             foreach (var (method, _) in systemMethods)
             {
                 var parameters = method.Parameters;
+                var componentParameters = parameters.Where(p => p.IsComponentParameter()).ToImmutableArray();
+                var componentsListFormatted = string.Join(", ", componentParameters.Select(mp => mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
 
                 { // void ()
                     if (parameters.Length == 0)
@@ -114,69 +143,123 @@ namespace {ns}
                 }
 
                 { // void (ref C1, ref C2, ref C3...)
-                    if (parameters.All(p => p.IsComponentParameter()))
-                    {
-                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+                    if (parameters.All(p => p.IsComponentParameter())) {
+                        sb.AppendLine($"// {method.ToDisplayString()}");
+                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
+                        sb.AppendLine("{");
+                        sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
+                        sb.AppendLine("for (int i = 0; i < c; i++)");
+                        sb.AppendLine("{");
+                        sb.AppendLine("var eid = *(buf + i);");
+                        sb.AppendLine("Update(");
+                        var args = componentParameters.Select(p => {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                        });
+                        sb.AppendLine(string.Join(", ", args));
+                        sb.AppendLine(");");
+                        sb.AppendLine("}");
+                        sb.AppendLine("}");
                         continue;
                     }
                 }
-
 
                 { // void (in Entity, ref C1, ref C2, ref C3...)
                     if (parameters[0].IsEntityParameter()
                         && parameters.Skip(1).All(p => p.IsComponentParameter()))
                     {
-                        sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()});");
+                        sb.AppendLine($"// {method.ToDisplayString()}");
+                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
+                        sb.AppendLine("fixed(Entity* ents = &world.entities[0])");
+                        sb.AppendLine("{");
+                        sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
+                        sb.AppendLine("for (int i = 0; i < c; i++)");
+                        sb.AppendLine("{");
+                        sb.AppendLine("var eid = buf[i];");
+                        sb.AppendLine("Update(");
+                        var args = componentParameters.Select(p => {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                        });
+                        args = args.Prepend("*(ents + eid)");
+                        sb.AppendLine(string.Join(", ", args));
+                        sb.AppendLine(");");
+                        sb.AppendLine("}");
+                        sb.AppendLine("}");
 
                         continue;
                     }
                 }
 
                 { // void (in/ref Uniform, ref C1, ref C2, ref C3...)
-                    if (parameters[0].IsUniformParameter(out var kind, out var name)
+                    if (parameters[0].IsUniformParameter(out var kind, out var uniformName)
                         && parameters.Skip(1).All(p => p.IsComponentParameter()))
                     {
+                        sb.AppendLine($"// {method.ToDisplayString()}");
+                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
+                        sb.AppendLine("{");
+                        sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
+                        sb.AppendLine("for (int i = 0; i < c; i++)");
+                        sb.AppendLine("{");
+                        sb.AppendLine("var eid = *(buf + i);");
+                        sb.AppendLine("Update(");
                         var uniformPrefix = parameters[0].RefKind.ToParameterPrefix();
-                        switch (kind) {
-                            case UniformKind.None:
-                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{method.Name}Uniform_{method.GetHashCode()});");
-                                break;
-                            case UniformKind.Delta:
-                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
-                                break;
-                            case UniformKind.Named:
-                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{name});");
-                                break;
-                            default: throw new ArgumentOutOfRangeException();
-                        }
+                        var uniformParameter = kind switch {
+                            UniformKind.None => $"{uniformPrefix}{method.Name}Uniform_{method.GetHashCode()}",
+                            UniformKind.Delta => "delta",
+                            UniformKind.Named => $"{uniformPrefix}{uniformName}",
+                        };
+                        var args = componentParameters.Select(p => {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                        });
+                        args = args.Prepend(uniformParameter);
+                        sb.AppendLine(string.Join(", ", args));
+                        sb.AppendLine(");");
+                        sb.AppendLine("}");
+                        sb.AppendLine("}");
                         continue;
                     }
                 }
 
                 { // void (in Entity, in/ref Uniform, ref C1, ref C2, ref C3...)
                     if (parameters[0].IsEntityParameter()
-                        && parameters[1].IsUniformParameter(out var kind, out var name)
+                        && parameters[1].IsUniformParameter(out var kind, out var uniformName)
                         && parameters.Skip(2).All(p => p.IsComponentParameter()))
                     {
+                        sb.AppendLine($"// {method.ToDisplayString()}");
+                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
+                        sb.AppendLine("fixed(Entity* ents = &world.entities[0])");
+                        sb.AppendLine("{");
+                        sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
+                        sb.AppendLine("for (int i = 0; i < c; i++)");
+                        sb.AppendLine("{");
+                        sb.AppendLine("var eid = *(buf + i);");
+                        sb.AppendLine("Update(");
                         var uniformPrefix = parameters[0].RefKind.ToParameterPrefix();
-                        switch (kind) {
-                            case UniformKind.None:
-                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{method.Name}Uniform_{method.GetHashCode()});");
-                                break;
-                            case UniformKind.Delta:
-                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, delta);");
-                                break;
-                            case UniformKind.Named:
-                                sb.AppendLine($"world.Iterate({method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}Delegate_{method.GetHashCode()}, {uniformPrefix}{name});");
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
+                        var uniformParameter = kind switch {
+                            UniformKind.None => $"{uniformPrefix}{method.Name}Uniform_{method.GetHashCode()}",
+                            UniformKind.Delta => "delta",
+                            UniformKind.Named => $"{uniformPrefix}{uniformName}",
+                        };
+                        var args = componentParameters.Select(p => {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                        });
+                        args = args.Prepend(uniformParameter);
+                        args = args.Prepend("*(ents + eid)");
+                        sb.AppendLine(string.Join(", ", args));
+                        sb.AppendLine(");");
+                        sb.AppendLine("}");
+                        sb.AppendLine("}");
                     }
                 }
 
                 // INVALID SIGNATURE!
             }
+
+            sb.AppendLine("}");
+
             return sb.ToString();
         }
 
@@ -218,64 +301,48 @@ namespace {ns}
             return sb.ToString();
         }
 
-        private string PlaceDelegates(IEnumerable<(IMethodSymbol method, int order)> systemMethods)
-        {
+        private static string PlaceUsedStoreVariables(IEnumerable<(IMethodSymbol method, int _)> systemMethods) {
+            var types = systemMethods.SelectMany(m => m.method.Parameters.Where(p => p.IsComponentParameter()).Select(p => p.Type))
+                .Distinct();
+
             var sb = new StringBuilder();
-            foreach (var (method, _) in systemMethods)
-            {
-                var parameters = method.Parameters;
 
-                { // void (ref C1, ref C2, ref C3...)
-                    if (parameters.All(p => p.IsComponentParameter()))
-                    {
-                        var typeListFormatted = string.Join(", ", parameters.Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                        sb.AppendLine($"private readonly ComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
-                        continue;
-                    }
-                }
-                
-                { // void (in Entity, ref C1, ref C2, ref C3...)
-                    if (parameters[0].IsEntityParameter()
-                        && parameters.Skip(1).All(p => p.IsComponentParameter()))
-                    {
-                        var typeListFormatted = string.Join(", ", parameters.Skip(1).Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                        sb.AppendLine($"private readonly EntityComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
-                        continue;
-                    }
-                }
-                
-                { // void (in Uniform, ref C1, ref C2, ref C3...)
-                    if (parameters[0].IsUniformParameter(out _, out _)
-                        && parameters.Skip(1).All(p => p.IsComponentParameter()))
-                    {
-                        var typeListFormatted = string.Join(", ", parameters.Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                        sb.AppendLine($"private readonly Uniform{parameters[0].RefKind}ComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
-                        continue;
-                    }
-                }
-
-                { // void (in Entity, in Uniform, ref C1, ref C2, ref C3...)
-                    if (parameters[0].IsEntityParameter()
-                        && parameters[1].IsUniformParameter(out _, out  _)
-                        && parameters.Skip(2).All(p => p.IsComponentParameter()))
-                    {
-                        var typeListFormatted = string.Join(", ", parameters.Skip(1).Select(mp => $"{mp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}"));
-                        sb.AppendLine($"private readonly EntityUniform{parameters[0].RefKind}ComponentDelegate<{typeListFormatted}> {method.Name}Delegate_{method.GetHashCode()};");
-                    }
-                }
-                
-                // INVALID SIGNATURE!
+            int i = 0;
+            foreach (var usedComponentType in types) {
+                var name = usedComponentType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"private Store<{name}> _s_{name.GetHashCode():X8};");
             }
+
             return sb.ToString();
         }
-        
-        private string PlaceDelegateInitializers(IEnumerable<(IMethodSymbol method, int order)> systemMethods)
-        {
+
+        private static string PlaceStoresInitializers(IEnumerable<(IMethodSymbol method, int order)> systemMethods) {
+            var types = systemMethods.SelectMany(m => m.method.Parameters.Where(p => p.IsComponentParameter()).Select(p => p.Type))
+                .Distinct();
+
             var sb = new StringBuilder();
-            foreach (var (method, _) in systemMethods)
-            {
-                sb.AppendLine($"{method.Name}Delegate_{method.GetHashCode()} = {method.Name};");
+
+            int i = 0;
+            foreach (var usedComponentType in types) {
+                var name = usedComponentType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"_s_{name.GetHashCode():X8} = world.GetStore<{name}>();");
             }
+
+            return sb.ToString();
+        }
+
+        private static string PlaceStoresDeinitializers(IEnumerable<(IMethodSymbol method, int order)> systemMethods) {
+            var types = systemMethods.SelectMany(m => m.method.Parameters.Where(p => p.IsComponentParameter()).Select(p => p.Type))
+                            .Distinct();
+
+            var sb = new StringBuilder();
+
+            int i = 0;
+            foreach (var usedComponentType in types) {
+                var name = usedComponentType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"_s_{name.GetHashCode():X8} = null;");
+            }
+
             return sb.ToString();
         }
     }

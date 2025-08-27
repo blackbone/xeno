@@ -1,11 +1,10 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Xeno {
 #pragma warning disable CS8500
     [StructLayout(LayoutKind.Sequential)]
-    internal abstract class Store {
+    public abstract class Store {
         public uint[] sparse;
         public uint[] dense;
         public uint count;
@@ -22,7 +21,7 @@ namespace Xeno {
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal class Store<T> : Store where T : struct, IComponent {
+    public class Store<T> : Store where T : struct, IComponent {
         public T[] data;
 
         public Store(in uint capacity) : base(capacity)

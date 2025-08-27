@@ -6,11 +6,11 @@ namespace Xeno
     /// Entity representation struct. 9 bytes only.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public readonly partial struct Entity
+    public partial struct Entity
     {
-        internal readonly uint Id;
-        internal readonly uint Version;
-        internal readonly ushort WorldId;
+        internal uint Id;
+        internal uint Version;
+        internal ushort WorldId;
 
         public override string ToString() => $"[{WorldId}|{Id}({Version})]{GetArchetype()}";
 

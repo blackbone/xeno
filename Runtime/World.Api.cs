@@ -1,14 +1,17 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Xeno
-{
+namespace Xeno {
     public sealed partial class World {
         public readonly string Name;
         public readonly ushort Id;
 
-        public uint EntityCount
-        {
+        /// <summary>
+        /// Buffer of matching entities from LAST MATCH CALL
+        /// </summary>
+        public uint[] buffer;
+
+        public uint EntityCount {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => entityCount;
         }
@@ -18,8 +21,7 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity() {
-            lock (this)
-            {
+            lock (this) {
                 if (entityCount == entities.Length)
                     GrowCapacity_Internal(entityCount << 1);
 
@@ -37,9 +39,9 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity<T1>(in T1 component)
-            where T1 : struct, IComponent
-        {
-            if (entityCount == entities.Length) GrowCapacity_Internal(entityCount << 1);
+            where T1 : struct, IComponent {
+            if (entityCount == entities.Length)
+                GrowCapacity_Internal(entityCount << 1);
 
             CreateEntity_Internal(out var entity);
             AddComponents_Internal(entity.Id, component);
@@ -50,9 +52,9 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity<T1, T2>(in T1 component1, in T2 component2)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            if (entityCount == entities.Length) GrowCapacity_Internal(entityCount << 1);
+            where T2 : struct, IComponent {
+            if (entityCount == entities.Length)
+                GrowCapacity_Internal(entityCount << 1);
 
             CreateEntity_Internal(out var entity);
             AddComponents_Internal(entity.Id, component1, component2);
@@ -64,9 +66,9 @@ namespace Xeno
         public Entity CreateEntity<T1, T2, T3>(in T1 component1, in T2 component2, in T3 component3)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            if (entityCount == entities.Length) GrowCapacity_Internal(entityCount << 1);
+            where T3 : struct, IComponent {
+            if (entityCount == entities.Length)
+                GrowCapacity_Internal(entityCount << 1);
 
             CreateEntity_Internal(out var entity);
             AddComponents_Internal(entity.Id, component1, component2, component3);
@@ -79,9 +81,9 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            if (entityCount == entities.Length) GrowCapacity_Internal(entityCount << 1);
+            where T4 : struct, IComponent {
+            if (entityCount == entities.Length)
+                GrowCapacity_Internal(entityCount << 1);
 
             CreateEntity_Internal(out var entity);
             AddComponents_Internal(entity.Id, component1, component2, component3, component4);
@@ -90,11 +92,10 @@ namespace Xeno
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DestroyEntity(in Entity entity)
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+        public void DestroyEntity(in Entity entity) {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
 
                 RemoveEntityFromArchetype_Internal(entity.Id);
                 RemoveComponents_Internal(entity.Id, entityArchetypes[entity.Id].mask);
@@ -108,16 +109,14 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasComponent<T1>(in Entity entity)
-            where T1 : struct, IComponent
-        {
+            where T1 : struct, IComponent {
             return IsEntityValid_Internal(entity) && HasComponent_Internal<T1>(entity.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAllComponents<T1, T2>(in Entity entity)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
+            where T2 : struct, IComponent {
             return IsEntityValid_Internal(entity) && HasAllComponents_Internal<T1, T2>(entity.Id);
         }
 
@@ -125,8 +124,7 @@ namespace Xeno
         public bool HasAllComponents<T1, T2, T3>(in Entity entity)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
+            where T3 : struct, IComponent {
             return IsEntityValid_Internal(entity) && HasAllComponents_Internal<T1, T2, T3>(entity.Id);
         }
 
@@ -135,16 +133,14 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
+            where T4 : struct, IComponent {
             return IsEntityValid_Internal(entity) && HasAllComponents_Internal<T1, T2, T3, T4>(entity.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAnyComponents<T1, T2>(in Entity entity)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
+            where T2 : struct, IComponent {
             return IsEntityValid_Internal(entity) && HasAnyComponents_Internal<T1, T2>(entity.Id);
         }
 
@@ -152,8 +148,7 @@ namespace Xeno
         public bool HasAnyComponents<T1, T2, T3>(in Entity entity)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
+            where T3 : struct, IComponent {
             return IsEntityValid_Internal(entity) && HasAnyComponents_Internal<T1, T2, T3>(entity.Id);
         }
 
@@ -162,18 +157,16 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
+            where T4 : struct, IComponent {
             return IsEntityValid_Internal(entity) && HasAnyComponents_Internal<T1, T2, T3, T4>(entity.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddComponents<T1>(in Entity entity, in T1 component1)
-            where T1 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T1 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 AddComponents_Internal(entity.Id, component1);
                 ChangeArchetypeAdd_Internal<T1>(entity.Id);
             }
@@ -182,11 +175,10 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddComponents<T1, T2>(in Entity entity, in T1 component1, in T2 component2)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T2 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 AddComponents_Internal(entity.Id, component1, component2);
                 ChangeArchetypeAdd_Internal<T1, T2>(entity.Id);
             }
@@ -196,11 +188,10 @@ namespace Xeno
         public void AddComponents<T1, T2, T3>(in Entity entity, in T1 component1, in T2 component2, in T3 component3)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T3 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 AddComponents_Internal(entity.Id, component1, component2, component3);
                 ChangeArchetypeAdd_Internal<T1, T2, T3>(entity.Id);
             }
@@ -211,11 +202,10 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T4 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 AddComponents_Internal(entity.Id, component1, component2, component3, component4);
                 ChangeArchetypeAdd_Internal<T1, T2, T3, T4>(entity.Id);
             }
@@ -223,11 +213,10 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RemoveComponents<T>(in Entity entity)
-            where T : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 RemoveComponents_Internal<T>(entity.Id);
                 ChangeArchetypeRemove_Internal<T>(entity.Id);
             }
@@ -235,11 +224,10 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RemoveComponents<T>(in Entity entity, ref T component)
-            where T : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return false;
+            where T : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return false;
                 var result = RemoveComponents_Internal(entity.Id, ref component);
                 ChangeArchetypeRemove_Internal<T>(entity.Id);
                 return result;
@@ -249,11 +237,10 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RemoveComponents<T1, T2>(in Entity entity)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T2 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 RemoveComponents_Internal<T1, T2>(entity.Id);
                 ChangeArchetypeRemove_Internal<T1, T2>(entity.Id);
             }
@@ -262,11 +249,10 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (bool, bool) RemoveComponents<T1, T2>(in Entity entity, ref T1 component1, ref T2 component2)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return default;
+            where T2 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return default;
                 var result = RemoveComponents_Internal(entity.Id, ref component1, ref component2);
                 ChangeArchetypeRemove_Internal<T1, T2>(entity.Id);
                 return result;
@@ -277,11 +263,10 @@ namespace Xeno
         public void RemoveComponents<T1, T2, T3>(in Entity entity)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T3 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 RemoveComponents_Internal<T1, T2, T3>(entity.Id);
                 ChangeArchetypeRemove_Internal<T1, T2, T3>(entity.Id);
             }
@@ -291,11 +276,10 @@ namespace Xeno
         public (bool, bool, bool) RemoveComponents<T1, T2, T3>(in Entity entity, ref T1 component1, ref T2 component2, ref T3 component3)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return default;
+            where T3 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return default;
                 var result = RemoveComponents_Internal(entity.Id, ref component1, ref component2, ref component3);
                 ChangeArchetypeRemove_Internal<T1, T2, T3>(entity.Id);
                 return result;
@@ -307,11 +291,10 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return;
+            where T4 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return;
                 RemoveComponents_Internal<T1, T2, T3, T4>(entity.Id);
                 ChangeArchetypeRemove_Internal<T1, T2, T3, T4>(entity.Id);
             }
@@ -322,11 +305,10 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            lock (this)
-            {
-                if (!IsEntityValid_Internal(entity)) return default;
+            where T4 : struct, IComponent {
+            lock (this) {
+                if (!IsEntityValid_Internal(entity))
+                    return default;
                 var result = RemoveComponents_Internal(entity.Id, ref component1, ref component2, ref component3, ref component4);
                 ChangeArchetypeRemove_Internal<T1, T2, T3, T4>(entity.Id);
                 return result;
@@ -335,9 +317,9 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref T1 Ref<T1>(in Entity entity)
-            where T1 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) throw new InvalidOperationException();
+            where T1 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                throw new InvalidOperationException();
             return ref RefComponent_Internal<T1>(entity.Id);
         }
 
@@ -345,18 +327,18 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RefComponent<T1>(in Entity entity, ref T1 component1)
-            where T1 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) return false;
+            where T1 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                return false;
             return RefComponents_Internal(entity.Id, ref component1);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RefComponentsAll<T1, T2>(in Entity entity, ref T1 component1, ref T2 component2)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) return false;
+            where T2 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                return false;
             return RefComponents_Internal(entity.Id, ref component1)
                 && RefComponents_Internal(entity.Id, ref component2);
         }
@@ -364,9 +346,9 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (bool, bool) RefComponentsAny<T1, T2>(in Entity entity, ref T1 component1, ref T2 component2)
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) return default;
+            where T2 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                return default;
             return (RefComponents_Internal(entity.Id, ref component1),
                 RefComponents_Internal(entity.Id, ref component2));
         }
@@ -375,9 +357,9 @@ namespace Xeno
         public bool RefComponentsAll<T1, T2, T3>(in Entity entity, ref T1 component1, ref T2 component2, ref T3 component3)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) return false;
+            where T3 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                return false;
             return RefComponents_Internal(entity.Id, ref component1)
                 && RefComponents_Internal(entity.Id, ref component2)
                 && RefComponents_Internal(entity.Id, ref component3);
@@ -387,9 +369,9 @@ namespace Xeno
         public (bool, bool, bool) RefComponentsAny<T1, T2, T3>(in Entity entity, ref T1 component1, ref T2 component2, ref T3 component3)
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) return default;
+            where T3 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                return default;
             return (RefComponents_Internal(entity.Id, ref component1),
                 RefComponents_Internal(entity.Id, ref component2),
                 RefComponents_Internal(entity.Id, ref component3));
@@ -400,9 +382,9 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) return false;
+            where T4 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                return false;
             return RefComponents_Internal(entity.Id, ref component1)
                 && RefComponents_Internal(entity.Id, ref component2)
                 && RefComponents_Internal(entity.Id, ref component3)
@@ -414,550 +396,13 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            if (!IsEntityValid_Internal(entity)) return default;
+            where T4 : struct, IComponent {
+            if (!IsEntityValid_Internal(entity))
+                return default;
             return (RefComponents_Internal(entity.Id, ref component1),
                 RefComponents_Internal(entity.Id, ref component2),
                 RefComponents_Internal(entity.Id, ref component3),
                 RefComponents_Internal(entity.Id, ref component4));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1>(ComponentDelegate<T1> update)
-            where T1 : struct, IComponent
-        {
-            // just ref-ing all components data without checking
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            for (var i = 0; i < cs1.count; i++) {
-                update(ref cs1.data[i]);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1>(EntityComponentDelegate<T1> update)
-            where T1 : struct, IComponent {
-
-            // just ref-ing all components data without checking
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            for (var i = 0; i < cs1.count; i++) {
-                update(Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]), ref cs1.data[i]);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1>(UniformInComponentDelegate<TU, T1> update, in TU uniform)
-            where T1 : struct, IComponent
-        {
-            // just ref-ing all components data without checking
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            for (var i = 0; i < cs1.count; i++) {
-                update(uniform, ref cs1.data[i]);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1>(UniformRefComponentDelegate<TU, T1> update, ref TU uniform)
-            where T1 : struct, IComponent
-        {
-            // just ref-ing all components data without checking
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            for (var i = 0; i < cs1.count; i++) {
-                update(ref uniform, ref cs1.data[i]);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1>(EntityUniformInComponentDelegate<TU, T1> update, in TU uniform)
-            where T1 : struct, IComponent
-        {
-            // just ref-ing all components data without checking
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            for (var i = 0; i < cs1.count; i++) {
-                update(Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]), uniform, ref cs1.data[i]);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1>(EntityUniformRefComponentDelegate<TU, T1> update, ref TU uniform)
-            where T1 : struct, IComponent
-        {
-            // just ref-ing all components data without checking
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            for (var i = 0; i < cs1.count; i++) {
-                update(Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]), ref uniform, ref cs1.data[i]);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1, T2>(ComponentDelegate<T1, T2> update)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]]
-                        );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1, T2>(EntityComponentDelegate<T1, T2> update)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2>(UniformInComponentDelegate<TU, T1, T2> update, in TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2>(UniformRefComponentDelegate<TU, T1, T2> update, ref TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        ref uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2>(EntityUniformInComponentDelegate<TU, T1, T2> update, in TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2>(EntityUniformRefComponentDelegate<TU, T1, T2> update, ref TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        ref uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1, T2, T3>(ComponentDelegate<T1, T2, T3> update)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1, T2, T3>(EntityComponentDelegate<T1, T2, T3> update)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3>(UniformInComponentDelegate<TU, T1, T2, T3> update, in TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3>(UniformRefComponentDelegate<TU, T1, T2, T3> update, ref TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        ref uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3>(EntityUniformInComponentDelegate<TU, T1, T2, T3> update, in TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3>(EntityUniformRefComponentDelegate<TU, T1, T2, T3> update, ref TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        ref uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1, T2, T3, T4>(ComponentDelegate<T1, T2, T3, T4> update)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-            var cs4 = (Store<T4>)stores[CI<T4>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]],
-                        ref cs4.data[cs4.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<T1, T2, T3, T4>(EntityComponentDelegate<T1, T2, T3, T4> update)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-            var cs4 = (Store<T4>)stores[CI<T4>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]],
-                        ref cs4.data[cs4.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3, T4>(UniformInComponentDelegate<TU, T1, T2, T3, T4> update, in TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-            var cs4 = (Store<T4>)stores[CI<T4>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]],
-                        ref cs4.data[cs4.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3, T4>(UniformRefComponentDelegate<TU, T1, T2, T3, T4> update, ref TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-            var cs4 = (Store<T4>)stores[CI<T4>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        ref uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]],
-                        ref cs4.data[cs4.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3, T4>(EntityUniformInComponentDelegate<TU, T1, T2, T3, T4> update, in TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-            var cs4 = (Store<T4>)stores[CI<T4>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]],
-                        ref cs4.data[cs4.sparse[eid]]
-                    );
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Iterate<TU, T1, T2, T3, T4>(EntityUniformRefComponentDelegate<TU, T1, T2, T3, T4> update, ref TU uniform)
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
-            var cs1 = (Store<T1>)stores[CI<T1>.Index];
-            var cs2 = (Store<T2>)stores[CI<T2>.Index];
-            var cs3 = (Store<T3>)stores[CI<T3>.Index];
-            var cs4 = (Store<T4>)stores[CI<T4>.Index];
-
-            var current = archetypes.head;
-            uint[] entityIds = null;
-            var count = 0;
-            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
-                for (var i = count - 1; i >= 0; i--) {
-                    var eid = entityIds[i];
-                    update(
-                        Unsafe.As<RWEntity, Entity>(ref entities[cs1.dense[i]]),
-                        ref uniform,
-                        ref cs1.data[cs1.sparse[eid]],
-                        ref cs2.data[cs2.sparse[eid]],
-                        ref cs3.data[cs3.sparse[eid]],
-                        ref cs4.data[cs4.sparse[eid]]
-                    );
-                }
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -968,8 +413,7 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Count<T1, T2>()
             where T1 : struct, IComponent
-            where T2 : struct, IComponent
-        {
+            where T2 : struct, IComponent {
             var result = 0;
             var current = archetypes.head;
             uint[] entityIds = null;
@@ -983,8 +427,7 @@ namespace Xeno
         public int Count<T1, T2, T3>()
             where T1 : struct, IComponent
             where T2 : struct, IComponent
-            where T3 : struct, IComponent
-        {
+            where T3 : struct, IComponent {
             var result = 0;
             var current = archetypes.head;
             uint[] entityIds = null;
@@ -999,14 +442,86 @@ namespace Xeno
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent
-            where T4 : struct, IComponent
-        {
+            where T4 : struct, IComponent {
             var result = 0;
             var current = archetypes.head;
             uint[] entityIds = null;
             var count = 0;
             while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count))
                 result += count;
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Store<T1> GetStore<T1>() where T1 : struct, IComponent {
+            if (CI<T1>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
+            ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            s ??= new Store<T1>(storeCapacity);
+            return s;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Match<T1>() where T1 : struct, IComponent {
+            var result = 0;
+            var current = archetypes.head;
+            uint[] entityIds = null;
+            var count = 0;
+            var buf_current = 0;
+            while (While(CI<T1>.Mask, ref current, ref entityIds, ref count)) {
+                Array.Copy(entityIds, 0, buffer,  buf_current, count);
+                result += count;
+            }
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Match<T1, T2>()
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent {
+            var result = 0;
+            var current = archetypes.head;
+            uint[] entityIds = null;
+            var count = 0;
+            var buf_current = 0;
+            while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
+                Array.Copy(entityIds, 0, buffer,  buf_current, count);
+                result += count;
+            }
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Match<T1, T2, T3>()
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent {
+            var result = 0;
+            var current = archetypes.head;
+            uint[] entityIds = null;
+            var count = 0;
+            var buf_current = 0;
+            while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
+                Array.Copy(entityIds, 0, buffer,  buf_current, count);
+                result += count;
+            }
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Match<T1, T2, T3, T4>()
+            where T1 : struct, IComponent
+            where T2 : struct, IComponent
+            where T3 : struct, IComponent
+            where T4 : struct, IComponent {
+            var result = 0;
+            var current = archetypes.head;
+            uint[] entityIds = null;
+            var count = 0;
+            var buf_current = 0;
+            while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
+                Array.Copy(entityIds, 0, buffer,  buf_current, count);
+                result += count;
+            }
             return result;
         }
 
@@ -1028,23 +543,19 @@ namespace Xeno
         public ulong Ticks => _ticks;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Tick(float f)
-        {
+        public void Tick(float f) {
             PreUpdate?.Invoke(f);
             Update?.Invoke(f);
             PostUpdate?.Invoke(f);
             _ticks++;
         }
 
-        public void Start()
-        {
+        public void Start() {
             defaultSystemGroup.AttachToWorld(this);
 
-            if (systemGroups.Count > 0)
-            {
+            if (systemGroups.Count > 0) {
                 var current = systemGroups.First;
-                do
-                {
+                do {
                     current?.Value.AttachToWorld(this);
                     current = current?.Next;
                 } while (current != null);
@@ -1054,15 +565,12 @@ namespace Xeno
             Started?.Invoke();
         }
 
-        public void Stop()
-        {
+        public void Stop() {
             Stopped?.Invoke();
 
-            if (systemGroups.Count > 0)
-            {
+            if (systemGroups.Count > 0) {
                 var current = systemGroups.Last;
-                do
-                {
+                do {
                     current?.Value.DetachFromWorld(this);
                     current = current?.Previous;
                 } while (current != null);
@@ -1071,8 +579,7 @@ namespace Xeno
             defaultSystemGroup.DetachFromWorld(this);
         }
 
-        public void EnsureCapacity(int capacity)
-        {
+        public void EnsureCapacity(int capacity) {
             // no op
         }
     }

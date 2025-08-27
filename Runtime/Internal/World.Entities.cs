@@ -8,7 +8,7 @@ namespace Xeno {
         private const uint NonAllocationMask = ~AllocatedMask;
 
         private uint entityCount;
-        internal RWEntity[] entities;
+        public Entity[] entities;
         private uint freeIdsCount;
         internal uint[] freeIds;
 
@@ -21,9 +21,10 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InitEntities() {
             entityCount = 0;
-            entities = Array.Empty<RWEntity>();
+            entities = Array.Empty<Entity>();
             freeIdsCount = 0;
             freeIds = Array.Empty<uint>();
+            buffer = Array.Empty<uint>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -55,7 +56,7 @@ namespace Xeno {
             }
 
             entities[e_id].Version |= AllocatedMask;
-            entity = Unsafe.As<RWEntity, Entity>(ref entities[e_id]);
+            entity = Unsafe.As<Entity, Entity>(ref entities[e_id]);
             entityCount++;
         }
 
