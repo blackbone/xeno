@@ -36,13 +36,13 @@ namespace Xeno {
             }
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
-            public List<Store> Stores {
+            public List<Store3> Stores {
                 get {
-                    var list = new List<Store>();
-                    for (int i = 0; i < _world.stores.Length; i++) {
-                        if (_world.stores[i] == null) continue;
+                    var list = new List<Store3>();
+                    for (int i = 0; i < _world.stores2.Length; i++) {
+                        if (_world.stores2[i] == null) continue;
 
-                        list.Add(_world.stores[i]);
+                        list.Add(_world.stores2[i]);
                     }
                     return list;
                 }

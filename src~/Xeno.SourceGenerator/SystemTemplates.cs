@@ -28,10 +28,12 @@ using Xeno;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+#pragma warning disable CS8500
 namespace {ns}
 {{
     public partial class {systemName}{(genericArgs.Length > 0 ? $"<{string.Join(", ", genericArgs)}>" : "")} : global::Xeno.System
     {{
+        {PlaceCommonVariables()}
         {PlaceUsedStoreVariables(systemMethods.SelectMany(kv => kv.Value))}
         {PlaceUniforms(systemMethods.SelectMany(kv => kv.Value))}
         
@@ -97,19 +99,6 @@ namespace {ns}
 
             var sb = new StringBuilder();
             systemMethods.Sort((a, b) => a.order - b.order);
-            var usedComponentTypes = systemMethods.Select(v => v.method)
-                .SelectMany(m => m.Parameters)
-                .Where(p => p.IsComponentParameter())
-                .Select(p => p.Type)
-                .Distinct();
-
-            foreach (var componentParameter in usedComponentTypes) {
-                var name = componentParameter.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                sb.AppendLine($"fixed({name}* d{name.GetHashCode():X8} = &_s_{name.GetHashCode():X8}.data[0])");
-                sb.AppendLine($"fixed(uint* s{name.GetHashCode():X8} = &_s_{name.GetHashCode():X8}.sparse[0])");
-            }
-
-            sb.AppendLine("{");
 
             foreach (var (method, _) in systemMethods)
             {
@@ -145,20 +134,24 @@ namespace {ns}
                 { // void (ref C1, ref C2, ref C3...)
                     if (parameters.All(p => p.IsComponentParameter())) {
                         sb.AppendLine($"// {method.ToDisplayString()}");
-                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
+                        foreach (var p in componentParameters) {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            sb.AppendLine($"_p_{name.GetHashCode():X8} = _s_{name.GetHashCode():X8}.pages;");
+                        }
+                        sb.AppendLine("buf = world.buffer;");
+                        sb.AppendLine($"c = world.Match<{componentsListFormatted}>();");
+                        sb.AppendLine("for (i = 0; i < c; i++)");
                         sb.AppendLine("{");
-                        sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
-                        sb.AppendLine("for (int i = 0; i < c; i++)");
-                        sb.AppendLine("{");
-                        sb.AppendLine("var eid = *(buf + i);");
+                        sb.AppendLine("eid = buf[i];");
+                        sb.AppendLine("pid = eid >> Store3.Shift;");
+                        sb.AppendLine("slot = eid & Store3.Mask;");
                         sb.AppendLine("Update(");
                         var args = componentParameters.Select(p => {
                             var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                            return $"ref _p_{name.GetHashCode():X8}[pid][slot]";
                         });
                         sb.AppendLine(string.Join(", ", args));
                         sb.AppendLine(");");
-                        sb.AppendLine("}");
                         sb.AppendLine("}");
                         continue;
                     }
@@ -169,22 +162,26 @@ namespace {ns}
                         && parameters.Skip(1).All(p => p.IsComponentParameter()))
                     {
                         sb.AppendLine($"// {method.ToDisplayString()}");
-                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
-                        sb.AppendLine("fixed(Entity* ents = &world.entities[0])");
+                        foreach (var p in componentParameters) {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            sb.AppendLine($"_p_{name.GetHashCode():X8} = _s_{name.GetHashCode():X8}.pages;");
+                        }
+                        sb.AppendLine("buf = world.buffer;");
+                        sb.AppendLine("ents = world.entities;");
+                        sb.AppendLine($"c = world.Match<{componentsListFormatted}>();");
+                        sb.AppendLine("for (i = 0; i < c; i++)");
                         sb.AppendLine("{");
-                        sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
-                        sb.AppendLine("for (int i = 0; i < c; i++)");
-                        sb.AppendLine("{");
-                        sb.AppendLine("var eid = buf[i];");
+                        sb.AppendLine("eid = buf[i];");
+                        sb.AppendLine("pid = eid >> Store3.Shift;");
+                        sb.AppendLine("slot = eid & Store3.Mask;");
                         sb.AppendLine("Update(");
                         var args = componentParameters.Select(p => {
                             var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                            return $"ref _p_{name.GetHashCode():X8}[pid][slot]";
                         });
-                        args = args.Prepend("*(ents + eid)");
+                        args = args.Prepend("ents[eid]");
                         sb.AppendLine(string.Join(", ", args));
                         sb.AppendLine(");");
-                        sb.AppendLine("}");
                         sb.AppendLine("}");
 
                         continue;
@@ -196,12 +193,17 @@ namespace {ns}
                         && parameters.Skip(1).All(p => p.IsComponentParameter()))
                     {
                         sb.AppendLine($"// {method.ToDisplayString()}");
-                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
-                        sb.AppendLine("{");
+                        foreach (var p in componentParameters) {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            sb.AppendLine($"_p_{name.GetHashCode():X8} = _s_{name.GetHashCode():X8}.pages;");
+                        }
+                        sb.AppendLine("buf = world.buffer;");
                         sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
-                        sb.AppendLine("for (int i = 0; i < c; i++)");
+                        sb.AppendLine("for (i = 0; i < c; i++)");
                         sb.AppendLine("{");
-                        sb.AppendLine("var eid = *(buf + i);");
+                        sb.AppendLine("eid = buf[i];");
+                        sb.AppendLine("pid = eid >> Store3.Shift;");
+                        sb.AppendLine("slot = eid & Store3.Mask;");
                         sb.AppendLine("Update(");
                         var uniformPrefix = parameters[0].RefKind.ToParameterPrefix();
                         var uniformParameter = kind switch {
@@ -211,12 +213,11 @@ namespace {ns}
                         };
                         var args = componentParameters.Select(p => {
                             var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                            return $"ref _p_{name.GetHashCode():X8}[pid][slot]";
                         });
                         args = args.Prepend(uniformParameter);
                         sb.AppendLine(string.Join(", ", args));
                         sb.AppendLine(");");
-                        sb.AppendLine("}");
                         sb.AppendLine("}");
                         continue;
                     }
@@ -228,13 +229,18 @@ namespace {ns}
                         && parameters.Skip(2).All(p => p.IsComponentParameter()))
                     {
                         sb.AppendLine($"// {method.ToDisplayString()}");
-                        sb.AppendLine("fixed(uint* buf = &world.buffer[0])");
-                        sb.AppendLine("fixed(Entity* ents = &world.entities[0])");
+                        foreach (var p in componentParameters) {
+                            var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            sb.AppendLine($"_p_{name.GetHashCode():X8} = _s_{name.GetHashCode():X8}.pages;");
+                        }
+                        sb.AppendLine("buf = world.buffer;");
+                        sb.AppendLine("ents = world.entities;");
+                        sb.AppendLine($"c = world.Match<{componentsListFormatted}>();");
+                        sb.AppendLine("for (i = 0; i < c; i++)");
                         sb.AppendLine("{");
-                        sb.AppendLine($"var c = world.Match<{componentsListFormatted}>();");
-                        sb.AppendLine("for (int i = 0; i < c; i++)");
-                        sb.AppendLine("{");
-                        sb.AppendLine("var eid = *(buf + i);");
+                        sb.AppendLine("eid = buf[i];");
+                        sb.AppendLine("pid = eid >> Store3.Shift;");
+                        sb.AppendLine("slot = eid & Store3.Mask;");
                         sb.AppendLine("Update(");
                         var uniformPrefix = parameters[0].RefKind.ToParameterPrefix();
                         var uniformParameter = kind switch {
@@ -244,21 +250,18 @@ namespace {ns}
                         };
                         var args = componentParameters.Select(p => {
                             var name = p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                            return $"ref Unsafe.AsRef<{name}>(d{name.GetHashCode():X8} + (int)*(s{name.GetHashCode():X8} + (int)eid))";
+                            return $"ref _p_{name.GetHashCode():X8}[pid][slot]";
                         });
                         args = args.Prepend(uniformParameter);
-                        args = args.Prepend("*(ents + eid)");
+                        args = args.Prepend("ents[eid]");
                         sb.AppendLine(string.Join(", ", args));
                         sb.AppendLine(");");
-                        sb.AppendLine("}");
                         sb.AppendLine("}");
                     }
                 }
 
                 // INVALID SIGNATURE!
             }
-
-            sb.AppendLine("}");
 
             return sb.ToString();
         }
@@ -301,6 +304,17 @@ namespace {ns}
             return sb.ToString();
         }
 
+        private static string PlaceCommonVariables() {
+            return @"
+private int i;
+private int c;
+private uint eid;
+private uint pid;
+private uint slot;
+private uint[] buf;
+";
+        }
+
         private static string PlaceUsedStoreVariables(IEnumerable<(IMethodSymbol method, int _)> systemMethods) {
             var types = systemMethods.SelectMany(m => m.method.Parameters.Where(p => p.IsComponentParameter()).Select(p => p.Type))
                 .Distinct();
@@ -310,7 +324,8 @@ namespace {ns}
             int i = 0;
             foreach (var usedComponentType in types) {
                 var name = usedComponentType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                sb.AppendLine($"private Store<{name}> _s_{name.GetHashCode():X8};");
+                sb.AppendLine($"private Store3<{name}> _s_{name.GetHashCode():X8};");
+                sb.AppendLine($"private {name}[][] _p_{name.GetHashCode():X8};");
             }
 
             return sb.ToString();

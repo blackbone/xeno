@@ -50,6 +50,20 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool Cross(this ref BitSetReadOnly set, ref BitSetReadOnly other) {
+            if (set.hash == other.hash) return true;
+            if (other.data.Length > set.data.Length) return false;
+
+            for (var i = 0; i < other.data.Length; i++)
+            {
+                if ((set.data[i] & other.data[i]) != 0)
+                    return true;
+            }
+
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool Includes(this ref BitSetReadOnly set, ref BitSetReadOnly other) {
             if (set.hash == other.hash) return true;
             if (other.data.Length > set.data.Length) return false;

@@ -32,10 +32,10 @@ namespace Xeno {
             public string Mask => _archetype.mask.ToString();
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
-            public List<Store> Stores {
+            public List<Store3> Stores {
                 get {
-                    var result = new List<Store>();
-                    result.AddRange(_archetype.mask.GetIndices().Select(i => _world.stores[i]));
+                    var result = new List<Store3>();
+                    result.AddRange(_archetype.mask.GetIndices().Select(i => _world.stores2[i]));
                     return result;
                 }
             }

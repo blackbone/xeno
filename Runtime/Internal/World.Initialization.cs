@@ -38,13 +38,6 @@ namespace Xeno {
 
             // components
             storeCapacity = capacity;
-            for (var i = 0; i < stores.Length; i++) {
-                ref var s = ref stores[i];
-                if (s == null) continue;
-                var ss = new uint[capacity];
-                Array.Copy(s.sparse, ss, s.sparse.Length);
-                s.sparse = ss;
-            }
 
             // buffer
             Array.Resize(ref buffer, (int)capacity);

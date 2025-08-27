@@ -110,14 +110,14 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasComponent<T1>(in Entity entity)
             where T1 : struct, IComponent {
-            return IsEntityValid_Internal(entity) && HasComponent_Internal<T1>(entity.Id);
+            return entityArchetypes[entity.Id].mask.Includes(ref CI<T1>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAllComponents<T1, T2>(in Entity entity)
             where T1 : struct, IComponent
             where T2 : struct, IComponent {
-            return IsEntityValid_Internal(entity) && HasAllComponents_Internal<T1, T2>(entity.Id);
+            return entityArchetypes[entity.Id].mask.Includes(ref CI<T1, T2>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -125,7 +125,7 @@ namespace Xeno {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
-            return IsEntityValid_Internal(entity) && HasAllComponents_Internal<T1, T2, T3>(entity.Id);
+            return entityArchetypes[entity.Id].mask.Includes(ref CI<T1, T2, T3>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -134,14 +134,14 @@ namespace Xeno {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
-            return IsEntityValid_Internal(entity) && HasAllComponents_Internal<T1, T2, T3, T4>(entity.Id);
+            return entityArchetypes[entity.Id].mask.Includes(ref CI<T1, T2, T3, T4>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAnyComponents<T1, T2>(in Entity entity)
             where T1 : struct, IComponent
             where T2 : struct, IComponent {
-            return IsEntityValid_Internal(entity) && HasAnyComponents_Internal<T1, T2>(entity.Id);
+            return entityArchetypes[entity.Id].mask.Cross(ref CI<T1, T2>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -149,7 +149,7 @@ namespace Xeno {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
-            return IsEntityValid_Internal(entity) && HasAnyComponents_Internal<T1, T2, T3>(entity.Id);
+            return entityArchetypes[entity.Id].mask.Cross(ref CI<T1, T2, T3>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -158,7 +158,7 @@ namespace Xeno {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
-            return IsEntityValid_Internal(entity) && HasAnyComponents_Internal<T1, T2, T3, T4>(entity.Id);
+            return entityArchetypes[entity.Id].mask.Cross(ref CI<T1, T2, T3, T4>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -407,8 +407,15 @@ namespace Xeno {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Count<T1>()
-            where T1 : struct, IComponent
-            => (int)stores[CI<T1>.Index].count;
+            where T1 : struct, IComponent {
+            var result = 0;
+            var current = archetypes.head;
+            uint[] entityIds = null;
+            var count = 0;
+            while (While(CI<T1>.Mask, ref current, ref entityIds, ref count))
+                result += count;
+            return result;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Count<T1, T2>()
@@ -453,10 +460,10 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Store<T1> GetStore<T1>() where T1 : struct, IComponent {
-            if (CI<T1>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-            ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
-            s ??= new Store<T1>(storeCapacity);
+        public Store3<T1> GetStore<T1>() where T1 : struct, IComponent {
+            if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, stores2.Length << 1);
+            ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
+            s ??= new Store3<T1>();
             return s;
         }
 
@@ -469,7 +476,7 @@ namespace Xeno {
             var buf_current = 0;
             while (While(CI<T1>.Mask, ref current, ref entityIds, ref count)) {
                 Array.Copy(entityIds, 0, buffer,  buf_current, count);
-                result += count;
+                buf_current = result += count;
             }
             return result;
         }
@@ -485,7 +492,7 @@ namespace Xeno {
             var buf_current = 0;
             while (While(CI<T1, T2>.Mask, ref current, ref entityIds, ref count)) {
                 Array.Copy(entityIds, 0, buffer,  buf_current, count);
-                result += count;
+                buf_current = result += count;
             }
             return result;
         }
@@ -502,7 +509,7 @@ namespace Xeno {
             var buf_current = 0;
             while (While(CI<T1, T2, T3>.Mask, ref current, ref entityIds, ref count)) {
                 Array.Copy(entityIds, 0, buffer,  buf_current, count);
-                result += count;
+                buf_current = result += count;
             }
             return result;
         }
@@ -520,7 +527,7 @@ namespace Xeno {
             var buf_current = 0;
             while (While(CI<T1, T2, T3, T4>.Mask, ref current, ref entityIds, ref count)) {
                 Array.Copy(entityIds, 0, buffer,  buf_current, count);
-                result += count;
+                buf_current = result += count;
             }
             return result;
         }

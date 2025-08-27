@@ -1,38 +1,36 @@
 using System;
 using System.Runtime.CompilerServices;
+using Xeno.Vendor;
 
 // ReSharper disable BadChildStatementIndent
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
 namespace Xeno {
     public sealed partial class World { // this part class is work with component data, not more or less
-        public Store[] stores;
+        public Store3[] stores2;
         private uint storeCapacity;
+
+        private uint pid;
+        private uint slot;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InitComponents(in uint storesCount, in uint entitiesCount) {
-            stores = new Store[storesCount];
-            storeCapacity = entitiesCount;
+            stores2 = new Store3[storesCount];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddComponents_Internal<T1>(in uint entityId, in T1 component1)
             where T1 : struct, IComponent
         {
+            pid = entityId >> Store3.Shift;
+            slot = entityId & Store3.Mask;
             {
-                if (CI<T1>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
-                s ??= new Store<T1>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component1;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T1>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
+                s ??= new Store3<T1>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T1[Store3.Cap];
+                s.pages[pid][slot] = component1;
             }
         }
 
@@ -41,35 +39,23 @@ namespace Xeno {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
         {
+            pid = entityId >> Store3.Shift;
+            slot = entityId & Store3.Mask;
             {
-                if (CI<T1>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
-                s ??= new Store<T1>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component1;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T1>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
+                s ??= new Store3<T1>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T1[Store3.Cap];
+                s.pages[pid][slot] = component1;
             }
             {
-                if (CI<T2>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
-                s ??= new Store<T2>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component2;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T2>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T2>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T2>>(ref stores2[CI<T2>.Index]);
+                s ??= new Store3<T2>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T2[Store3.Cap];
+                s.pages[pid][slot] = component2;
             }
         }
 
@@ -79,50 +65,31 @@ namespace Xeno {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
         {
+            pid = entityId >> Store3.Shift;
+            slot = entityId & Store3.Mask;
             {
-                if (CI<T1>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
-                s ??= new Store<T1>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component1;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T1>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
+                s ??= new Store3<T1>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T1[Store3.Cap];
+                s.pages[pid][slot] = component1;
             }
             {
-                if (CI<T2>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
-                s ??= new Store<T2>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component2;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T2>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T2>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T2>>(ref stores2[CI<T2>.Index]);
+                s ??= new Store3<T2>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T2[Store3.Cap];
+                s.pages[pid][slot] = component2;
             }
             {
-                if (CI<T3>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T3>>(ref stores[CI<T3>.Index]);
-                s ??= new Store<T3>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component3;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T3>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T3>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T3>>(ref stores2[CI<T3>.Index]);
+                s ??= new Store3<T3>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T3[Store3.Cap];
+                s.pages[pid][slot] = component3;
             }
         }
 
@@ -133,87 +100,49 @@ namespace Xeno {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
         {
+            pid = entityId >> Store3.Shift;
+            slot = entityId & Store3.Mask;
             {
-                if (CI<T1>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
-                s ??= new Store<T1>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component1;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T1>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
+                s ??= new Store3<T1>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T1[Store3.Cap];
+                s.pages[pid][slot] = component1;
             }
             {
-                if (CI<T2>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T2>>(ref stores[CI<T2>.Index]);
-                s ??= new Store<T2>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component2;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T2>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T2>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T2>>(ref stores2[CI<T2>.Index]);
+                s ??= new Store3<T2>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T2[Store3.Cap];
+                s.pages[pid][slot] = component2;
             }
             {
-                if (CI<T3>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T3>>(ref stores[CI<T3>.Index]);
-                s ??= new Store<T3>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component3;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T3>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T3>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T3>>(ref stores2[CI<T3>.Index]);
+                s ??= new Store3<T3>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T3[Store3.Cap];
+                s.pages[pid][slot] = component3;
             }
             {
-                if (CI<T4>.Index >= stores.Length) Array.Resize(ref stores, stores.Length << 1);
-                ref var s = ref Unsafe.As<Store, Store<T4>>(ref stores[CI<T4>.Index]);
-                s ??= new Store<T4>(storeCapacity);
-                if (s.count == s.dense.Length) {
-                    Array.Resize(ref s.dense, s.dense.Length << 1);
-                    Array.Resize(ref s.data, s.data.Length << 1);
-                }
-
-                var c = s.count;
-                s.data[c] = component4;
-                s.sparse[entityId] = c;
-                s.dense[c] = entityId;
-                s.count++;
+                if (CI<T4>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T4>.Index) + 1);
+                ref var s = ref Unsafe.As<Store3, Store3<T4>>(ref stores2[CI<T4>.Index]);
+                s ??= new Store3<T4>();
+                if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+                s.pages[pid] ??= new T4[Store3.Cap];
+                s.pages[pid][slot] = component4;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void RemoveComponents_Internal(in uint entityId, in BitSetReadOnly mask) {
             foreach (var index in mask.indices) {
-                ref var s = ref stores[index];
+                ref var s = ref stores2[index];
                 if (s == null) continue;
 
-                var d1 = s.sparse[entityId];
-                if (d1 >= s.count) return;
-
-                ref var sp = ref s.dense[d1];
-                if (sp != entityId) return;
-
-                var last = --s.count;
-
-                var ld =  s.dense[last];
-                sp = ld;
-                s.sparse[entityId] = d1;
-
-                s.SwapData_Internal(d1, last);
+                s.Remove_Internal(entityId);
             }
         }
 
@@ -221,22 +150,18 @@ namespace Xeno {
         private void RemoveComponents_Internal<T1>(in uint entityId)
             where T1 : struct, IComponent
         {
-            ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, stores2.Length << 1);
+            ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
             if (s == null) return;
 
-            var d1 = s.sparse[entityId];
-            if (d1 > s.count) return;
+            pid = entityId >> Store3.Shift;
+            if (pid >= s.pages.Length) return;
 
-            var sp = s.dense[d1];
-            if (sp != entityId) return;
+            var page = s.pages[pid];
+            if (page == null) return;
 
-            var last = --s.count;
-
-            s.data[d1] = s.data[last];
-
-            var ld = s.dense[last];
-            s.dense[d1] = ld;
-            s.sparse[ld] = d1;
+            slot = entityId & Store3.Mask;
+            page[slot] = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -274,24 +199,14 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool RemoveComponents_Internal<T1>(in uint entityId, ref T1 component1)
             where T1 : struct, IComponent {
-            ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, stores2.Length << 1);
+            ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
             if (s == null) return false;
-
-            var d1 = s.sparse[entityId];
-            if (d1 > s.count) return false;
-
-            var sp = s.dense[d1];
-            if (sp != entityId) return false;
-
-            var last = --s.count;
-
-            component1 = s.data[d1];
-            s.data[d1] = s.data[last];
-
-            var ld = s.dense[last];
-            s.dense[d1] = ld;
-            s.sparse[ld] = d1;
-
+            pid = entityId >> Store3.Shift;
+            if (pid >= s.pages.Length) return false;
+            if (s.pages[pid] == null) return false;
+            slot = entityId & Store3.Mask;
+            component1 = ref s.pages[pid][slot];
             return true;
         }
 
@@ -335,12 +250,7 @@ namespace Xeno {
         private bool HasComponent_Internal<T1>(in uint entityId)
             where T1 : struct, IComponent
         {
-            ref var s = ref stores[CI<T1>.Index];
-            if (s == null) return false;
-            if (entityId >= s.sparse.Length) return false;
-
-            var d = s.sparse[entityId];
-            return d < s.count && s.dense[d] == entityId;
+            return entityArchetypes[entityId].mask.Includes(ref CI<T1>.Mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -400,27 +310,28 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ref T1 RefComponent_Internal<T1>(in uint entityId)
             where T1 : struct, IComponent {
-            ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
-            if (s == null) return ref CI<T1>.Default;
-
-            var d = s.sparse[entityId];
-            if (d > s.count) return ref CI<T1>.Default;
-            var sp = s.dense[d];
-            if (sp != entityId) return ref CI<T1>.Default;
-            return ref s.data[d];
+            if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, stores2.Length << 1);
+            if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T1>.Index) + 1);
+            ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
+            s ??= new Store3<T1>();
+            pid = entityId >> Store3.Shift;
+            if (pid >= s.pages.Length) Array.Resize(ref s.pages, (int)BitOperations.Smear(pid) + 1);
+            s.pages[pid] ??= new T1[Store3.Cap];
+            slot = entityId & Store3.Mask;
+            return ref s.pages[pid][slot];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool RefComponents_Internal<T1>(in uint entityId, ref T1 component1)
             where T1 : struct, IComponent {
-            ref var s = ref Unsafe.As<Store, Store<T1>>(ref stores[CI<T1>.Index]);
+            if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, stores2.Length << 1);
+            ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);
             if (s == null) return false;
-
-            var d = s.sparse[entityId];
-            if (d > s.count) return false;
-            var sp = s.dense[d];
-            if (sp != entityId) return false;
-            component1 = s.data[d];
+            pid = entityId >> Store3.Shift;
+            if (pid >= s.pages.Length) return false;
+            if (s.pages[pid] == null) return false;
+            slot = entityId & Store3.Mask;
+            component1 = ref s.pages[pid][slot];
             return true;
         }
 

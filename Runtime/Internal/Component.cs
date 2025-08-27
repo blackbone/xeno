@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.InteropServices;
+
 // ReSharper disable StaticMemberInGenericType
 
 namespace Xeno
