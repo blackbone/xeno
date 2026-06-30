@@ -70,20 +70,20 @@ namespace Xeno
         {
             systems.AddLast(system);
             
-            if (system.IsWorldStartSystem) started += system.Start;
-            if (system.IsPreUpdateSystem) preUpdate += system.PreUpdate;
-            if (system.IsUpdateSystem) update += system.Update;
-            if (system.IsPostUpdateSystem) postUpdate += system.PostUpdate;
-            if (system.IsWordStopSystem) stopped += system.Stop;
+            if (system.RunsOnWorldStart) started += system.InvokeStart;
+            if (system.RunsOnPreUpdate) preUpdate += system.InvokePreUpdate;
+            if (system.RunsOnUpdate) update += system.InvokeUpdate;
+            if (system.RunsOnPostUpdate) postUpdate += system.InvokePostUpdate;
+            if (system.RunsOnWorldStop) stopped += system.InvokeStop;
         }
         
         public void RemoveSystem(in System system)
         {
-            if (system.IsWorldStartSystem) started -= system.Start;
-            if (system.IsPreUpdateSystem) preUpdate -= system.PreUpdate;
-            if (system.IsUpdateSystem) update -= system.Update;
-            if (system.IsPostUpdateSystem) postUpdate -= system.PostUpdate;
-            if (system.IsWordStopSystem) stopped -= system.Stop;
+            if (system.RunsOnWorldStart) started -= system.InvokeStart;
+            if (system.RunsOnPreUpdate) preUpdate -= system.InvokePreUpdate;
+            if (system.RunsOnUpdate) update -= system.InvokeUpdate;
+            if (system.RunsOnPostUpdate) postUpdate -= system.InvokePostUpdate;
+            if (system.RunsOnWorldStop) stopped -= system.InvokeStop;
             
             systems.Remove(system);
         }

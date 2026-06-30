@@ -6,7 +6,7 @@ namespace Xeno {
     [DebuggerTypeProxy(typeof(World.Entity_Debug))]
     public partial struct Entity { }
 
-    public sealed partial class World {
+    public partial class World {
         internal struct Entity_Debug {
             public readonly uint Id;
             public readonly uint Version;

@@ -4,7 +4,7 @@ using Xeno;
 
 namespace Xeno {
     [DebuggerTypeProxy(typeof(World_Debug))]
-    public sealed partial class World {
+    public partial class World {
         internal class World_Debug {
             private readonly World _world;
             public World_Debug(World world) => _world = world;

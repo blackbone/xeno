@@ -10,6 +10,59 @@ Xenomorp ECS is just another ECS for C# and unity utilizing some experimental an
 * a lot of unsafe code
 * direct memory manipulations and types blitting
 
+## Release 0.2.0 Highlights
+
+Version `0.2.0` consolidates the changes since `0.1.9` into one release focused on generated
+worlds, stricter runtime safety, and lower-level hot-path optimization:
+
+* Generate typed worlds from partial `World` declarations without requiring component interfaces.
+* Harden runtime mutation and storage checks to fail earlier on invalid or stale entity access.
+* Add bulk entity deletion and optimize bitset, archetype, and page/store operations.
+* Cover the generator/runtime contract with regression tests and CI validation.
+
+# Repository Layout
+
+The package is split across Unity-facing runtime files and .NET development projects:
+
+* `Runtime/` contains the ECS runtime API and internal storage/archetype implementation.
+* `Editor/` contains the Unity editor assembly and UI assets.
+* `src~/Xeno.sln` is the .NET development solution for tests, source generator work, and samples.
+* `src~/Xeno.Tests/` contains the NUnit regression suite.
+* `src~/Xeno.SourceGenerator/` contains the Roslyn generator and analyzer project.
+* `src~/Xeno.SourceGenerator.Sample/` contains a sample project that consumes the generator.
+
+# Validation
+
+Run the repository validation entrypoint from the repo root:
+
+```sh
+./scripts/validate.sh
+```
+
+The script runs the .NET solution test suite at `src~/Xeno.sln`.
+
+GitHub Actions runs the same validation on pushes to `main` and pull requests.
+
+# Package Metadata
+
+Unity package metadata lives in `package.json`. NuGet package metadata lives in `Xeno.csproj` and
+`src~/Xeno.SourceGenerator/Xeno.SourceGenerator.csproj`. Version `0.2.0` is the current release and
+all three package versions should stay aligned before cutting the next one.
+
+# Generated Worlds
+
+World-specific code generation is driven by attributes on a partial `World` subtype:
+
+```csharp
+[RegisterComponent(typeof(Position))]
+[RegisterSystem(typeof(MovementSystem))]
+public partial class GameWorld : World { }
+```
+
+The generator emits the world constructor, typed store/page caches, system delegates, and direct `Start`,
+`Tick`, and `Stop` overrides. Components can be registered explicitly or inferred from registered system
+method parameters.
+
 # Roadmap
 
 - [ ] Base core implementation wich includes:
@@ -20,4 +73,6 @@ Xenomorp ECS is just another ECS for C# and unity utilizing some experimental an
     - [ ] Api for Unity
     - [X] NuGet package of v1
     - [ ] Documentation
-- [ ] TODO...
+- [ ] Unity package validation in CI
+- [ ] Public API documentation
+- [ ] Source generator analyzer coverage

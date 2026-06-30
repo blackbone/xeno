@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Xeno.Vendor;
 
 namespace Xeno {
     [StructLayout(LayoutKind.Sequential)]
@@ -14,6 +15,7 @@ namespace Xeno {
         public static BitSetReadOnly Zero = new(0);
 
         public readonly int max;
+        public readonly int maskSize;
         public readonly ulong hash;
         public readonly ulong[] data;
         public readonly uint[] indices;
@@ -21,6 +23,7 @@ namespace Xeno {
         private BitSetReadOnly(int _) {
             hash = 0;
             max = 0;
+            maskSize = 0;
             data = emptyUlong;
             indices = emptyUInt;
         }
@@ -30,6 +33,7 @@ namespace Xeno {
             data = new ulong[set.data.Length];
             set.data.CopyTo(data);
             max = set.max;
+            maskSize = set.maskSize;
 
             Span<uint> buffer = stackalloc uint[Constants.MaxArchetypeComponents];
             set.GetIndices(ref buffer, out var count);
@@ -79,15 +83,13 @@ namespace Xeno {
 
         internal static IEnumerable<uint> GetIndices(this BitSetReadOnly set) {
             var l = set.data.Length;
-            uint u_i = 0;
-            for (var i = 0; i < l; i++, u_i++) {
+            for (var i = 0; i < l; i++) {
                 var v = set.data[i];
 
-                var k = 0u;
                 while (v != 0) {
-                    if ((v & 1ul) == 1ul) yield return  u_i * Constants.LongBitSize + k;
-                    v >>= 1;
-                    k++;
+                    var offset = BitOperations.TrailingZeroCount64(v);
+                    yield return (uint)(i * Constants.LongBitSize + offset);
+                    v &= v - 1;
                 }
             }
         }

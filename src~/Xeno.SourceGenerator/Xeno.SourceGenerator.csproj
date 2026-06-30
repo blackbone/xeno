@@ -11,12 +11,13 @@
         <PackageId>Xeno.SourceGenerator</PackageId>
 
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.1.6</PackageVersion>
+        <PackageVersion>0.2.0</PackageVersion>
         <Title>General purpose ECS Source Generator</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides source generator for XENO ECS to get basic stuff.</Description>
         <Copyright>Dmytro Osipov</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>Readme.md</PackageReadmeFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageTags>ecs dotnet unity source generator</PackageTags>
     </PropertyGroup>
@@ -47,7 +48,7 @@
         <None Remove="obj~\**"/>
         <None Remove="bin~\**"/>
         <None Remove="**\*.meta"/>
-        <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+        <None Include="Readme.md" Pack="true" PackagePath="" />
     </ItemGroup>
 
     <ItemGroup>

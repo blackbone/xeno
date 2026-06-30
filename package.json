@@ -4,7 +4,7 @@
   "displayName": "Xeno",
   "description": "Xenomorphic dead-beat ECS.",
   "unity": "2020.3",
-  "version": "2023.1.0",
+  "version": "0.2.0",
   "keywords": [
     "xeno",
     "ecs"

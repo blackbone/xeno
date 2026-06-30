@@ -18,10 +18,11 @@ namespace Xeno
     {
         public static T Default = default;
         public static readonly int Index = ComponentInfo.Index++;
+        public static readonly int MaskSize = BitSet.MaskSize(Index);
 
         public static BitSetReadOnly Mask;
         static CI() {
-            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Index)]) {
+            var set = new BitSet(stackalloc ulong[MaskSize]) {
                 max = Index
             };
             set.Set(Index).FinalizeHash();
@@ -31,10 +32,11 @@ namespace Xeno
 
     public static class CI<T1, T2> {
         internal static readonly int Max = Math.Max(CI<T1>.Index, CI<T2>.Index);
+        public static readonly int MaskSize = BitSet.MaskSize(Max);
         public static BitSetReadOnly Mask;
 
         static CI() {
-            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Max)]) {
+            var set = new BitSet(stackalloc ulong[MaskSize]) {
                 max = Max
             };
             set.Set(CI<T1>.Index).Set(CI<T2>.Index).FinalizeHash();
@@ -44,10 +46,11 @@ namespace Xeno
 
     public static class CI<T1, T2, T3> {
         public static readonly int Max = Math.Max(CI<T1, T2>.Max, CI<T3>.Index);
+        public static readonly int MaskSize = BitSet.MaskSize(Max);
         public static BitSetReadOnly Mask;
 
         static CI() {
-            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Max)]) {
+            var set = new BitSet(stackalloc ulong[MaskSize]) {
                 max = Max
             };
             set.Set(CI<T1>.Index).Set(CI<T2>.Index).Set(CI<T3>.Index).FinalizeHash();
@@ -57,9 +60,10 @@ namespace Xeno
 
     public static class CI<T1, T2, T3, T4> {
         private static readonly int Max = Math.Max(CI<T1, T2>.Max, CI<T3, T4>.Max);
+        public static readonly int MaskSize = BitSet.MaskSize(Max);
         public static BitSetReadOnly Mask;
         static CI() {
-            var set = new BitSet(stackalloc ulong[BitSet.MaskSize(Max)]) {
+            var set = new BitSet(stackalloc ulong[MaskSize]) {
                 max = Max
             };
             set.Set(CI<T1>.Index).Set(CI<T2>.Index).Set(CI<T3>.Index).Set(CI<T4>.Index).FinalizeHash();

@@ -151,35 +151,35 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Remove(this Archetypes archetypes, Archetype archetype, uint entityId, uint[] inArchetypeLocalIndices) {
+        public static void Remove(this Archetypes archetypes, Archetype archetype, uint entityId, uint[] inArchetypeLocalIndices, bool recycleEmpty = true) {
             var localArchetypeIndex = inArchetypeLocalIndices[entityId];
             if (localArchetypeIndex >= archetype.entitiesCount) throw new IndexOutOfRangeException($"entityId: {entityId}, localIndex: {localArchetypeIndex}, entityCount: {archetype.entitiesCount}");
 
             var lastIndex = archetype.entitiesCount - 1;
-            // if deleting element which is not last - need to fill hole with last
-            if (localArchetypeIndex < archetype.entitiesCount) {
-                // get last entity id
+            if (localArchetypeIndex != lastIndex) {
                 var currentLastId = archetype.entities[lastIndex];
-
-                // clear the value
-                archetype.entities[lastIndex] = 0;
                 archetype.entities[localArchetypeIndex] = currentLastId;
                 inArchetypeLocalIndices[currentLastId] = localArchetypeIndex;
             }
-            archetype.entitiesCount--;
+
+            archetype.entities[lastIndex] = 0;
+            archetype.entitiesCount = lastIndex;
 
             if (!archetype.floating || archetype.entitiesCount > 0)
                 return;
 
-            if (archetype.Equals(archetypes.head)) archetypes.head = archetype.next;
+            if (ReferenceEquals(archetypes.head, archetype)) archetypes.head = archetype.next;
             if (archetype.prev != null) archetype.prev.next = archetype.next;
             if (archetype.next != null) archetype.next.prev = archetype.prev;
 
-            archetype.Clear();
+            archetype.Clear(!recycleEmpty);
+            if (!recycleEmpty)
+                return;
+
             var len = archetypes.freeArchetypes.Length;
             if (archetypes.freeArchetypesCount == len)
                 Array.Resize(ref archetypes.freeArchetypes, len << 1);
-            archetypes.freeArchetypes[archetypes.freeArchetypesCount] = archetype;
+            archetypes.freeArchetypes[archetypes.freeArchetypesCount++] = archetype;
         }
     }
 }

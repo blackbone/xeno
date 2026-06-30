@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Xeno {
+#pragma warning disable CS8500
     /// <summary>
     /// 4 MB slab allocator that hands out 4 KB pages. Uses manual aligned unmanaged memory (no GC pinning required).
     /// </summary>
@@ -41,14 +42,14 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T* GetPage<T>() where T : struct, IComponent {
+        public static T* GetPage<T>() where T : struct {
             if (_freePages.Count == 0) AllocateSlab();
             var ptr = _freePages.Pop();
             return (T*)ptr;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void FreePage<T>(T* page) where T : struct, IComponent {
+        public static void FreePage<T>(T* page) where T : struct {
             _freePages.Push((IntPtr)page);
         }
 
@@ -63,4 +64,5 @@ namespace Xeno {
             _freePages.Clear();
         }
     }
+#pragma warning restore CS8500
 }

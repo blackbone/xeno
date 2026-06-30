@@ -12,6 +12,12 @@ namespace Xeno
 
         private static ushort WorldIdAllocator => _worldsCounter++;
 
+        internal static ushort AllocateWorldId(string name)
+        {
+            if (_worldNameToId.ContainsKey(name)) throw new InvalidOperationException($"World with name {name} already exists");
+            return WorldIdAllocator;
+        }
+
         internal static void Add(in World world)
         {
             if (_existingWorlds.Length <= world.Id) Array.Resize(ref _existingWorlds, world.Id + 1);
@@ -27,8 +33,7 @@ namespace Xeno
 
         public static World Create(string name)
         {
-            if (_worldNameToId.ContainsKey(name)) throw new InvalidOperationException($"World with name {name} already exists");
-            return new World(name, WorldIdAllocator);
+            return new World(name, AllocateWorldId(name));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -59,7 +64,7 @@ namespace Xeno
         public static World GetOrCreate(in string name)
         {
             if (!TryGet(name, out var world))
-                world = new World(name, WorldIdAllocator);
+                world = new World(name, AllocateWorldId(name));
             return world;
         }
     }

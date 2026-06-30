@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 
 namespace Xeno {
-    public sealed partial class World {
+    public partial class World {
         // this part of file is about creating entities
         private const uint AllocatedMask = 0b10000000_00000000_00000000_00000000U;
         private const uint NonAllocationMask = ~AllocatedMask;
@@ -15,6 +15,7 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsEntityValid_Internal(in Entity entity) {
             if (entity.WorldId != Id) return false;
+            if (entity.Id >= entities.Length) return false;
             return entities[entity.Id].Version == entity.Version;
         }
 
@@ -62,13 +63,27 @@ namespace Xeno {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteEntity_Internal(in Entity entity) {
-            ref var e = ref entities[entity.Id];
+            DeleteEntity_Internal(entity.Id);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeleteEntity_Internal(in uint entityId) {
+            ref var e = ref entities[entityId];
             e.Version &= NonAllocationMask;
             e.Version++;
             entityCount--;
 
             if (freeIdsCount == freeIds.Length) Array.Resize(ref freeIds, (int)(freeIdsCount << 1));
             freeIds[freeIdsCount++] = e.Id;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureFreeIdsCapacity_Internal(in uint capacity) {
+            if (capacity <= freeIds.Length) return;
+
+            var size = freeIds.Length == 0 ? 1 : freeIds.Length;
+            while (size < capacity) size <<= 1;
+            Array.Resize(ref freeIds, size);
         }
     }
 }

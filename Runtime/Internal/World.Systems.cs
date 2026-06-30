@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 namespace Xeno {
-    public sealed partial class World
+    public partial class World
     {
          private readonly SystemGroup defaultSystemGroup = new("Default");
          private readonly LinkedList<SystemGroup> systemGroups = new();

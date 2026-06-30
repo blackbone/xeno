@@ -1,12 +1,17 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using NUnit.Framework;
 
 namespace Xeno.Tests;
 
 [TestFixture]
 public class StressTests_LargeScaleOperations {
     [SetUp]
-    public void SetUp() => Worlds.Create("world");
+    public void SetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void TearDown() {
@@ -16,7 +21,7 @@ public class StressTests_LargeScaleOperations {
 
     [Test]
     public void CreateAndDeleteMillionEntities_PerformanceTest() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         const int entityCount = 1_000_000;
 
         var entities = new Entity[entityCount];
@@ -26,26 +31,24 @@ public class StressTests_LargeScaleOperations {
             entities[i] = world.CreateEntity();
         }
         stopwatch.Stop();
-        Console.WriteLine($"Created {entityCount} entities in {stopwatch.ElapsedMilliseconds}ms");
 
         stopwatch.Restart();
         for (int i = 0; i < entityCount; i++) {
             entities[i].Destroy();
         }
         stopwatch.Stop();
-        Console.WriteLine($"Destroyed {entityCount} entities in {stopwatch.ElapsedMilliseconds}ms");
 
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
     }
 
     [Test]
     public void CreateAndRemoveComponentsInLoop_StabilityCheck() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity();
 
         for (var i = 0; i < 10_000; i++) {
-            world.AddComponents(e, new ComponentA());
-            world.RemoveComponents<ComponentA>(e);
+            world.Add(e, new ComponentA());
+            world.RemoveComponentA(e);
         }
 
         e.Destroy();
@@ -54,7 +57,7 @@ public class StressTests_LargeScaleOperations {
 
     [Test]
     public void RemoveEntitiesInRandomOrder_NoCorruption() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         const int entityCount = 10_000;
         var entities = new List<Entity>();
 
@@ -75,12 +78,12 @@ public class StressTests_LargeScaleOperations {
 
     [Test]
     public void ContinuousComponentAdditionRemoval_ValidateIndices() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity();
 
         for (int i = 0; i < 5_000; i++) {
-            world.AddComponents(e, new ComponentA());
-            world.RemoveComponents<ComponentA>(e);
+            world.Add(e, new ComponentA());
+            world.RemoveComponentA(e);
         }
 
         Assert.That(world.inArchetypeLocalIndices[e.Id], Is.EqualTo(0));
@@ -89,7 +92,7 @@ public class StressTests_LargeScaleOperations {
 
     [Test]
     public void RapidEntityCreationDeletion_ParallelThreads() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         const int threadCount = 4;
         const int entitiesPerThread = 250_000;
 
@@ -106,19 +109,24 @@ public class StressTests_LargeScaleOperations {
             });
         }
 
+#if XENO_OWNER_THREAD_GUARD_ASSERTS
+        var exception = Assert.Throws<AggregateException>(() => Task.WaitAll(tasks));
+        Assert.That(exception!.Flatten().InnerExceptions.Any(ex => ex is InvalidOperationException));
+#else
         Task.WaitAll(tasks);
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
+#endif
     }
 
     [Test]
     public void AllocateLargeEntities_VerifyMemoryCapacity() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         const int entityCount = 500_000;
 
         var entities = new Entity[entityCount];
         for (int i = 0; i < entityCount; i++) {
             entities[i] = world.CreateEntity();
-            world.AddComponents(entities[i], new LargeComponent());
+            world.Add(entities[i], new LargeComponent());
         }
 
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
@@ -130,12 +138,13 @@ public class StressTests_LargeScaleOperations {
 
     [Test]
     public void MassComponentAdditionRemoval_DoesNotCorruptArchetypeLayout() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity();
 
         for (int i = 0; i < 10_000; i++) {
-            world.AddComponents(e, new ComponentA(), new ComponentB());
-            world.RemoveComponents<ComponentA, ComponentB>(e);
+            world.Add(e, new ComponentA());
+            world.Add(e, new ComponentB());
+            world.RemoveComponentAAndComponentB(e);
         }
 
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));
@@ -144,7 +153,7 @@ public class StressTests_LargeScaleOperations {
 
     [Test]
     public void MultiThreadedEntityMovementBetweenArchetypes() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         const int entityCount = 100_000;
         var entities = new Entity[entityCount];
 
@@ -156,15 +165,19 @@ public class StressTests_LargeScaleOperations {
         for (int t = 0; t < 4; t++) {
             tasks[t] = Task.Run(() => {
                 for (int i = 0; i < entityCount / 4; i++) {
-                    world.AddComponents(entities[i], new ComponentA());
-                    world.RemoveComponents<ComponentA>(entities[i]);
+                    world.Add(entities[i], new ComponentA());
+                    world.RemoveComponentA(entities[i]);
                 }
             });
         }
 
+#if XENO_OWNER_THREAD_GUARD_ASSERTS
+        var exception = Assert.Throws<AggregateException>(() => Task.WaitAll(tasks));
+        Assert.That(exception!.Flatten().InnerExceptions.Any(ex => ex is InvalidOperationException));
+#else
         Task.WaitAll(tasks);
-
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(entityCount));
+#endif
 
         for (int i = 0; i < entityCount; i++) {
             entities[i].Destroy();
@@ -173,7 +186,7 @@ public class StressTests_LargeScaleOperations {
 
     [Test]
     public void Benchmark_AddRemoveEntities_ScaleTest() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         const int iterations = 1_000_000;
 
         var stopwatch = Stopwatch.StartNew();
@@ -182,20 +195,18 @@ public class StressTests_LargeScaleOperations {
             e.Destroy();
         }
         stopwatch.Stop();
-
-        Console.WriteLine($"Processed {iterations} entities in {stopwatch.ElapsedMilliseconds}ms");
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
     }
 
     [Test]
     public void ECSFragmentationUnderHeavyUsage() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         const int entityCount = 500_000;
         var entities = new Entity[entityCount];
 
         for (int i = 0; i < entityCount; i++) {
             entities[i] = world.CreateEntity();
-            if (i % 2 == 0) world.AddComponents(entities[i], new ComponentA());
+            if (i % 2 == 0) world.Add(entities[i], new ComponentA());
         }
 
         for (int i = 0; i < entityCount; i++) {
@@ -203,7 +214,7 @@ public class StressTests_LargeScaleOperations {
         }
 
         for (int i = 0; i < entityCount; i++) {
-            if (i % 5 == 0) world.AddComponents(entities[i], new ComponentB());
+            if (i % 5 == 0) world.Add(entities[i], new ComponentB());
         }
 
         Assert.That(world.zeroArchetype.entitiesCount, Is.LessThan(entityCount));

@@ -9,7 +9,7 @@
         <AssemblyName>Xeno</AssemblyName>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.1.6</PackageVersion>
+        <PackageVersion>0.2.0</PackageVersion>
         <Title>General purpose ECS</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides bare bones ECS to get basic stuff.</Description>
@@ -19,10 +19,13 @@
         <PackageTags>ecs dotnet unity</PackageTags>
         <PackageProjectUrl>https://github.com/blackbone/xeno</PackageProjectUrl>
         <PackageIcon>xeno.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <RepositoryUrl>https://github.com/blackbone/xeno</RepositoryUrl>
         <RepositoryType>github</RepositoryType>
-        <PackageReleaseNotes>Added:
-&gt; support for delta uniform in systems
+        <PackageReleaseNotes>Changed:
+&gt; generate typed worlds without component interfaces
+&gt; harden runtime storage and mutation validation
+&gt; add bulk entity deletion and bitset/archetype optimizations
         </PackageReleaseNotes>
     </PropertyGroup>
 
@@ -33,7 +36,7 @@
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <DefineConstants>TRACE;VECTORIZATION</DefineConstants>
+        <DefineConstants>$(DefineConstants);TRACE;VECTORIZATION</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
@@ -56,6 +59,8 @@
         <None Remove="obj~\**"/>
         <None Remove="**\*.meta"/>
         <None Include="xeno.png" Pack="true" PackagePath="">
+        </None>
+        <None Include="README.md" Pack="true" PackagePath="">
         </None>
     </ItemGroup>
 

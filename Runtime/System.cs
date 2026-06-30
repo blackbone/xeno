@@ -7,20 +7,32 @@ namespace Xeno
     {
         protected World world;
 
-        protected internal abstract bool IsWorldStartSystem { get; }
-        protected internal abstract bool IsPreUpdateSystem { get; }
-        protected internal abstract bool IsUpdateSystem { get; }
-        protected internal abstract bool IsPostUpdateSystem { get; }
-        protected internal abstract bool IsWordStopSystem { get; }
+        protected abstract bool IsWorldStartSystem { get; }
+        protected abstract bool IsPreUpdateSystem { get; }
+        protected abstract bool IsUpdateSystem { get; }
+        protected abstract bool IsPostUpdateSystem { get; }
+        protected abstract bool IsWordStopSystem { get; }
 
-        protected internal abstract void Start();
-        protected internal abstract void PreUpdate(in float delta);
-        protected internal abstract void Update(in float delta);
-        protected internal abstract void PostUpdate(in float delta);
-        protected internal abstract void Stop();
+        protected abstract void Start();
+        protected abstract void PreUpdate(in float delta);
+        protected abstract void Update(in float delta);
+        protected abstract void PostUpdate(in float delta);
+        protected abstract void Stop();
 
         protected abstract void OnAfterAttachToWorld();
         protected abstract void OnBeforeDetachFromWorld();
+
+        internal bool RunsOnWorldStart => IsWorldStartSystem;
+        internal bool RunsOnPreUpdate => IsPreUpdateSystem;
+        internal bool RunsOnUpdate => IsUpdateSystem;
+        internal bool RunsOnPostUpdate => IsPostUpdateSystem;
+        internal bool RunsOnWorldStop => IsWordStopSystem;
+
+        internal void InvokeStart() => Start();
+        internal void InvokePreUpdate(in float delta) => PreUpdate(delta);
+        internal void InvokeUpdate(in float delta) => Update(delta);
+        internal void InvokePostUpdate(in float delta) => PostUpdate(delta);
+        internal void InvokeStop() => Stop();
 
         internal void AttachToWorld(in World worldToAttach)
         {

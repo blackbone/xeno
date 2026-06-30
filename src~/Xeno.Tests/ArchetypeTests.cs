@@ -23,11 +23,7 @@ public class ArchetypeTests {
     public void OneEntityPass() {
         Worlds.TryGet("world", out var world);
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         var e = world.CreateEntity();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.entityArchetypes[e.Id], Is.EqualTo(world.zeroArchetype));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));
@@ -35,8 +31,6 @@ public class ArchetypeTests {
         Assert.That(world.zeroArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
         e.AddComponents(default(Component1));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
@@ -46,8 +40,6 @@ public class ArchetypeTests {
         Assert.That(firstArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
         e.AddComponents(default(Component2));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(1));
         Assert.That(world.Count<Component2>(), Is.EqualTo(1));
@@ -61,8 +53,6 @@ public class ArchetypeTests {
         Assert.That(secondArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
         e.AddComponents(default(Component3));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(1));
         Assert.That(world.Count<Component2>(), Is.EqualTo(1));
@@ -81,8 +71,6 @@ public class ArchetypeTests {
         Assert.That(thirdArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
         e.AddComponents(default(Component4));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(1));
         Assert.That(world.Count<Component2>(), Is.EqualTo(1));
@@ -108,8 +96,6 @@ public class ArchetypeTests {
 
         e.RemoveComponents<Component1>();
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(1));
         Assert.That(world.Count<Component3>(), Is.EqualTo(1));
@@ -134,8 +120,6 @@ public class ArchetypeTests {
         Assert.That(fifthArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
         e.RemoveComponents<Component2>();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));
@@ -163,8 +147,6 @@ public class ArchetypeTests {
 
         e.RemoveComponents<Component3>();
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));
         Assert.That(world.Count<Component3>(), Is.EqualTo(0));
@@ -191,8 +173,6 @@ public class ArchetypeTests {
         Assert.That(seventhArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
         e.RemoveComponents<Component4>();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));
@@ -234,11 +214,7 @@ public class ArchetypeTests {
     public void TwoEntitiesPass() {
         Worlds.TryGet("world", out var world);
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         var e1 = world.CreateEntity();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.entityArchetypes[e1.Id], Is.EqualTo(world.zeroArchetype));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));
@@ -247,16 +223,12 @@ public class ArchetypeTests {
 
         var e2 = world.CreateEntity();
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.entityArchetypes[e2.Id], Is.EqualTo(world.zeroArchetype));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(world.inArchetypeLocalIndices[e2.Id], Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.AddComponents(default(Component1));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));
@@ -267,8 +239,6 @@ public class ArchetypeTests {
 
         e2.AddComponents(default(Component1));
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(2));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype, Is.Not.EqualTo(world.zeroArchetype));
@@ -276,8 +246,6 @@ public class ArchetypeTests {
         Assert.That(firstArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.AddComponents(default(Component2));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(2));
         Assert.That(world.Count<Component2>(), Is.EqualTo(1));
@@ -292,8 +260,6 @@ public class ArchetypeTests {
 
         e2.AddComponents(default(Component2));
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(2));
         Assert.That(world.Count<Component2>(), Is.EqualTo(2));
         Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(2));
@@ -305,8 +271,6 @@ public class ArchetypeTests {
         Assert.That(secondArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.AddComponents(default(Component3));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(2));
         Assert.That(world.Count<Component2>(), Is.EqualTo(2));
@@ -326,8 +290,6 @@ public class ArchetypeTests {
 
         e2.AddComponents(default(Component3));
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(2));
         Assert.That(world.Count<Component2>(), Is.EqualTo(2));
         Assert.That(world.Count<Component3>(), Is.EqualTo(2));
@@ -344,8 +306,6 @@ public class ArchetypeTests {
         Assert.That(thirdArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.AddComponents(default(Component4));
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(2));
         Assert.That(world.Count<Component2>(), Is.EqualTo(2));
@@ -371,8 +331,6 @@ public class ArchetypeTests {
 
         e2.AddComponents(default(Component4));
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(2));
         Assert.That(world.Count<Component2>(), Is.EqualTo(2));
         Assert.That(world.Count<Component3>(), Is.EqualTo(2));
@@ -395,8 +353,6 @@ public class ArchetypeTests {
         Assert.That(fourthArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.RemoveComponents<Component1>();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(1));
         Assert.That(world.Count<Component2>(), Is.EqualTo(2));
@@ -423,8 +379,6 @@ public class ArchetypeTests {
 
         e2.RemoveComponents<Component1>();
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(2));
         Assert.That(world.Count<Component3>(), Is.EqualTo(2));
@@ -448,8 +402,6 @@ public class ArchetypeTests {
         Assert.That(fifthArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.RemoveComponents<Component2>();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(1));
@@ -477,8 +429,6 @@ public class ArchetypeTests {
 
         e2.RemoveComponents<Component2>();
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));
         Assert.That(world.Count<Component3>(), Is.EqualTo(2));
@@ -503,8 +453,6 @@ public class ArchetypeTests {
         Assert.That(sixthArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.RemoveComponents<Component3>();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));
@@ -533,8 +481,6 @@ public class ArchetypeTests {
 
         e2.RemoveComponents<Component3>();
 
-        Console.WriteLine($"{world.archetypes}\n");
-
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));
         Assert.That(world.Count<Component3>(), Is.EqualTo(0));
@@ -560,8 +506,6 @@ public class ArchetypeTests {
         Assert.That(seventhArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
         e1.RemoveComponents<Component4>();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));
@@ -590,8 +534,6 @@ public class ArchetypeTests {
         Assert.That(eigthArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
         e2.RemoveComponents<Component4>();
-
-        Console.WriteLine($"{world.archetypes}\n");
 
         Assert.That(world.Count<Component1>(), Is.EqualTo(0));
         Assert.That(world.Count<Component2>(), Is.EqualTo(0));

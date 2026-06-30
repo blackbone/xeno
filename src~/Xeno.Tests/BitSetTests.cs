@@ -135,4 +135,44 @@ public class BitSetTests {
             Assert.That(bitset.Get(i), Is.False);
         }
     }
+
+    [Test]
+    public unsafe void BitSet_FromAdd_PreservesOriginWordsWhenAddMaskIsShorter() {
+        var origin = new BitSet(stackalloc ulong[BitSet.MaskSize(70)]);
+        origin.Set(70).FinalizeHash();
+        var originMask = origin.AsReadOnly();
+
+        var add = new BitSet(stackalloc ulong[BitSet.MaskSize(1)]);
+        add.Set(1).FinalizeHash();
+        var addMask = add.AsReadOnly();
+
+        var result = new BitSet(stackalloc ulong[BitSet.MaskSize(70)]);
+        result.FromAdd(originMask, addMask);
+
+        Assert.That(result.data[0], Is.EqualTo(1ul << 1));
+        Assert.That(result.data[1], Is.EqualTo(1ul << 6));
+        Assert.That(result.max, Is.EqualTo(70));
+        Assert.That(result.maskSize, Is.EqualTo(2));
+    }
+
+    [Test]
+    public unsafe void BitSet_FromRemove_RecalculatesMaxAndIndices() {
+        var origin = new BitSet(stackalloc ulong[BitSet.MaskSize(70)]);
+        origin.Set(1).Set(70).FinalizeHash();
+        var originMask = origin.AsReadOnly();
+
+        var remove = new BitSet(stackalloc ulong[BitSet.MaskSize(70)]);
+        remove.Set(70).FinalizeHash();
+        var removeMask = remove.AsReadOnly();
+
+        var result = new BitSet(stackalloc ulong[BitSet.MaskSize(70)]);
+        result.FromRemove(originMask, removeMask);
+        var resultMask = result.AsReadOnly();
+
+        Assert.That(result.data[0], Is.EqualTo(1ul << 1));
+        Assert.That(result.data[1], Is.Zero);
+        Assert.That(result.max, Is.EqualTo(1));
+        Assert.That(result.maskSize, Is.EqualTo(1));
+        Assert.That(resultMask.indices, Is.EqualTo(new uint[] { 1 }));
+    }
 }

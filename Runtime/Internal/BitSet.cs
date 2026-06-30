@@ -10,6 +10,7 @@ namespace Xeno
     [StructLayout(LayoutKind.Sequential)]
     public ref struct BitSet {
         internal int max;
+        internal int maskSize;
         internal ulong hash;
         internal Span<ulong> data;
 
@@ -17,6 +18,7 @@ namespace Xeno
             this.data = data;
             this.hash = 0;
             max = 0;
+            maskSize = 0;
         }
 
         public override string ToString() => $"{this.ToS()}";
@@ -45,6 +47,7 @@ namespace Xeno
             set.data = Span<ulong>.Empty;
             set.hash = 0;
             set.max = 0;
+            set.maskSize = 0;
         }
     }
 
@@ -52,6 +55,7 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref BitSet Set(this ref BitSet set, int index) {
             set.data[index >> Constants.LONG_DIVIDER] |= 1ul << (index & Constants.LONG_DIVISION_MASK);
+            if (set.max < index) set.max = index;
             return ref set;
         }
 
@@ -63,52 +67,74 @@ namespace Xeno
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FromAdd(this ref BitSet set, in BitSetReadOnly origin, in BitSetReadOnly add) {
-            if (origin.data.Length == 0) {
-                add.data.CopyTo(set.data);
-                set.hash = add.hash;
-                set.max = add.max;
-                return;
-            }
-
             var l1 = origin.data.Length;
             var l2 = add.data.Length;
+            var min = l1 < l2 ? l1 : l2;
             var i = 0;
-            while (i < l1 && i < l2) {
-                set.data[i] = origin.data[i] | add.data[i];
-                i++;
-            }
+            var hash = 0ul;
 
-            while (i < l2) {
-                set.data[i] = add.data[i];
-                i++;
-            }
-
-            set.max = origin.max > add.max ? origin.max : add.max;
-            set.FinalizeHash();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void FromRemove(this ref BitSet set, in BitSetReadOnly origin, in BitSetReadOnly remove) {
-            if (origin.data.Length == 0) {
-                BitSet.Zero(ref set);
-                return;
-            }
-
-            var l1 = origin.data.Length;
-            var l2 = remove.data.Length;
-            var i = 0;
-            while (i < l1 && i < l2) {
-                set.data[i] = origin.data[i] & ~remove.data[i];
+            while (i < min) {
+                var value = origin.data[i] | add.data[i];
+                set.data[i] = value;
+                hash ^= value;
                 i++;
             }
 
             while (i < l1) {
-                set.data[i] = origin.data[i];
+                var value = origin.data[i];
+                set.data[i] = value;
+                hash ^= value;
                 i++;
             }
 
-            set.FinalizeMax();
-            set.FinalizeHash();
+            while (i < l2) {
+                var value = add.data[i];
+                set.data[i] = value;
+                hash ^= value;
+                i++;
+            }
+
+            while (i < set.data.Length)
+                set.data[i++] = 0;
+
+            set.max = origin.max > add.max ? origin.max : add.max;
+            set.maskSize = BitSet.MaskSize(set.max);
+            set.hash = hash;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void FromRemove(this ref BitSet set, in BitSetReadOnly origin, in BitSetReadOnly remove) {
+            var l1 = origin.data.Length;
+            var l2 = remove.data.Length;
+            var min = l1 < l2 ? l1 : l2;
+            var i = 0;
+            var hash = 0ul;
+            var maxWord = -1;
+
+            while (i < min) {
+                var value = origin.data[i] & ~remove.data[i];
+                set.data[i] = value;
+                hash ^= value;
+                if (value != 0) maxWord = i;
+                i++;
+            }
+
+            while (i < l1) {
+                var value = origin.data[i];
+                set.data[i] = value;
+                hash ^= value;
+                if (value != 0) maxWord = i;
+                i++;
+            }
+
+            while (i < set.data.Length)
+                set.data[i++] = 0;
+
+            set.max = maxWord >= 0
+                ? maxWord * Constants.LongBitSize + BitOperations.Log2(set.data[maxWord])
+                : 0;
+            set.maskSize = BitSet.MaskSize(set.max);
+            set.hash = hash;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -142,6 +168,8 @@ namespace Xeno
                     return;
                 }
             }
+
+            set.max = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -181,6 +209,7 @@ namespace Xeno
                     }
                     break;
             }
+            set.maskSize = BitSet.MaskSize(set.max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -190,15 +219,13 @@ namespace Xeno
         internal static void GetIndices(this in BitSet set, ref Span<uint> values, out int count) {
             var n = 0;
             var l = set.data.Length;
-            uint u_i = 0;
-            for (var i = 0; i < l; i++, u_i++) {
+            for (var i = 0; i < l; i++) {
                 var v = set.data[i];
 
-                var k = 0u;
                 while (v != 0) {
-                    if ((v & 1ul) == 1ul) values[n++] = u_i * Constants.LongBitSize + k;
-                    v >>= 1;
-                    k++;
+                    var offset = BitOperations.TrailingZeroCount64(v);
+                    values[n++] = (uint)(i * Constants.LongBitSize + offset);
+                    v &= v - 1;
                 }
             }
             count = n;

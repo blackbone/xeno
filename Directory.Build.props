@@ -4,5 +4,7 @@
         <IntermediateOutputPath>./src~\.obj\$(Configuration)</IntermediateOutputPath>
         <BaseIntermediateOutputPath>./src~\.obj\$(Configuration)</BaseIntermediateOutputPath>
         <MSBUildProjectExtensionsPath>./src~\.obj</MSBUildProjectExtensionsPath>
+        <XenoOwnerThreadGuardAsserts>true</XenoOwnerThreadGuardAsserts>
+        <DefineConstants Condition="'$(XenoOwnerThreadGuardAsserts)' == 'true'">$(DefineConstants);XENO_OWNER_THREAD_GUARD_ASSERTS</DefineConstants>
     </PropertyGroup>
 </Project>

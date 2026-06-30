@@ -24,9 +24,10 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Clear() {
+        public void Clear(bool clearEntities = true) {
             entitiesCount = 0;
-            Array.Clear(entities, 0, entities.Length);
+            if (clearEntities)
+                Array.Clear(entities, 0, entities.Length);
             prev = null;
             next = null;
         }
