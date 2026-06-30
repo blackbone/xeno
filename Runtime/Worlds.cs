@@ -31,11 +31,6 @@ namespace Xeno
             _worldNameToId.Remove(world.Name);
         }
 
-        public static World Create(string name)
-        {
-            return new World(name, AllocateWorldId(name));
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryGet(in ushort worldId, out World world)
         {
@@ -59,13 +54,6 @@ namespace Xeno
 
             world = default;
             return false;
-        }
-
-        public static World GetOrCreate(in string name)
-        {
-            if (!TryGet(name, out var world))
-                world = new World(name, AllocateWorldId(name));
-            return world;
         }
     }
 }

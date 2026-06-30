@@ -1,9 +1,11 @@
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class RuntimeMutationInvalidEntityTests {
     [SetUp]
-    public void SetUp() => Worlds.Create("world");
+    public void SetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void TearDown() {
@@ -13,7 +15,7 @@ public class RuntimeMutationInvalidEntityTests {
 
     [Test]
     public void StaleEntityCannotAddComponentsToReusedEntitySlot() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var stale = world.CreateEntity();
         stale.Destroy();
@@ -22,17 +24,17 @@ public class RuntimeMutationInvalidEntityTests {
         Assert.That(replacement.Id, Is.EqualTo(stale.Id));
         Assert.That(world.IsEntityValid(stale), Is.False);
 
-        world.AddComponents(stale, new ComponentA { Value = 10 });
+        world.Add(stale, new ComponentA { Value = 10 });
 
         Assert.That(world.IsEntityValid(replacement), Is.True);
-        Assert.That(world.HasComponent<ComponentA>(replacement), Is.False);
+        Assert.That(world.HasComponentA(replacement), Is.False);
 
         replacement.Destroy();
     }
 
     [Test]
     public void StaleEntityCannotRemoveComponentsFromReusedEntitySlot() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var stale = world.CreateEntity();
         stale.Destroy();
@@ -41,18 +43,18 @@ public class RuntimeMutationInvalidEntityTests {
         Assert.That(replacement.Id, Is.EqualTo(stale.Id));
         Assert.That(world.IsEntityValid(stale), Is.False);
 
-        world.RemoveComponents<ComponentA>(stale);
+        world.RemoveComponentA(stale);
 
         Assert.That(world.IsEntityValid(replacement), Is.True);
-        Assert.That(world.HasComponent<ComponentA>(replacement), Is.True);
-        Assert.That(world.Ref<ComponentA>(replacement).Value, Is.EqualTo(10));
+        Assert.That(world.HasComponentA(replacement), Is.True);
+        Assert.That(world.RefComponentA(replacement).Value, Is.EqualTo(10));
 
         replacement.Destroy();
     }
 
     [Test]
     public void StaleEntityCannotDestroyReusedEntitySlot() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var stale = world.CreateEntity();
         stale.Destroy();
@@ -71,7 +73,7 @@ public class RuntimeMutationInvalidEntityTests {
 
     [Test]
     public void OutOfRangeEntityIsInvalidAndSafeForQueries() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var invalid = new Entity {
             Id = uint.MaxValue,
             Version = 1,
@@ -79,23 +81,23 @@ public class RuntimeMutationInvalidEntityTests {
         };
 
         Assert.That(world.IsEntityValid(invalid), Is.False);
-        Assert.That(world.HasComponent<ComponentA>(invalid), Is.False);
-        Assert.That(world.HasAllComponents<ComponentA, ComponentB>(invalid), Is.False);
-        Assert.That(world.HasAnyComponents<ComponentA, ComponentB>(invalid), Is.False);
+        Assert.That(world.HasComponentA(invalid), Is.False);
+        Assert.That(world.HasComponentAAndComponentB(invalid), Is.False);
+        Assert.That(world.HasAnyComponentAOrComponentB(invalid), Is.False);
     }
 
     [Test]
     public void StaleEntityHasNoComponents() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var stale = world.CreateEntity(new ComponentA(), new ComponentB());
         stale.Destroy();
         var replacement = world.CreateEntity(new ComponentA());
 
         Assert.That(world.IsEntityValid(stale), Is.False);
-        Assert.That(world.HasComponent<ComponentA>(stale), Is.False);
-        Assert.That(world.HasAllComponents<ComponentA, ComponentB>(stale), Is.False);
-        Assert.That(world.HasAnyComponents<ComponentA, ComponentB>(stale), Is.False);
+        Assert.That(world.HasComponentA(stale), Is.False);
+        Assert.That(world.HasComponentAAndComponentB(stale), Is.False);
+        Assert.That(world.HasAnyComponentAOrComponentB(stale), Is.False);
 
         replacement.Destroy();
     }

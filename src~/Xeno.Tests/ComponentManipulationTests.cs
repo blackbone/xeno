@@ -1,9 +1,12 @@
+using System.Linq;
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class ComponentManipulationTests {
     [SetUp]
-    public void SetUp() => Worlds.Create("world");
+    public void SetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void TearDown() {
@@ -13,78 +16,80 @@ public class ComponentManipulationTests {
 
     [Test]
     public void AddingComponentToEntityUpdatesArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
         var initialArchetype = world.entityArchetypes[e.Id];
 
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
         var newArchetype = world.entityArchetypes[e.Id];
 
         Assert.That(initialArchetype, Is.Not.EqualTo(newArchetype));
-        Assert.That(newArchetype.mask.Get(CI<ComponentA>.Index), Is.True);
+        Assert.That(world.HasComponentA(e), Is.True);
 
         e.Destroy();
     }
 
     [Test]
     public void RemovingComponentFromEntityUpdatesArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
         var archetypeWithA = world.entityArchetypes[e.Id];
 
-        world.RemoveComponents<ComponentA>(e);
+        world.RemoveComponentA(e);
         var archetypeWithoutA = world.entityArchetypes[e.Id];
 
         Assert.That(archetypeWithA, Is.Not.EqualTo(archetypeWithoutA));
-        Assert.That(archetypeWithoutA.mask.Get(CI<ComponentA>.Index), Is.False);
+        Assert.That(world.HasComponentA(e), Is.False);
 
         e.Destroy();
     }
 
     [Test]
     public void AddingMultipleComponentsUpdatesMask() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA(), new ComponentB());
+        world.Add(e, new ComponentA());
+        world.Add(e, new ComponentB());
 
         var archetype = world.entityArchetypes[e.Id];
 
-        Assert.That(archetype.mask.Get(CI<ComponentA>.Index), Is.True);
-        Assert.That(archetype.mask.Get(CI<ComponentB>.Index), Is.True);
+        Assert.That(world.HasComponentAAndComponentB(e), Is.True);
 
         e.Destroy();
     }
 
     [Test]
     public void RemovingOneComponentPreservesOther() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA(), new ComponentB());
+        world.Add(e, new ComponentA());
+        world.Add(e, new ComponentB());
 
-        world.RemoveComponents<ComponentA>(e);
+        world.RemoveComponentA(e);
 
         var archetype = world.entityArchetypes[e.Id];
 
-        Assert.That(archetype.mask.Get(CI<ComponentA>.Index), Is.False);
-        Assert.That(archetype.mask.Get(CI<ComponentB>.Index), Is.True);
+        Assert.That(world.HasComponentA(e), Is.False);
+        Assert.That(world.HasComponentB(e), Is.True);
 
         e.Destroy();
     }
 
     [Test]
     public void RemovingAllComponentsMovesEntityToZeroArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA(), new ComponentB());
+        world.Add(e, new ComponentA());
+        world.Add(e, new ComponentB());
 
-        world.RemoveComponents<ComponentA>(e);
-        world.RemoveComponents<ComponentB>(e);
+        world.RemoveComponentA(e);
+        world.RemoveComponentB(e);
 
         var archetype = world.entityArchetypes[e.Id];
 
@@ -96,13 +101,13 @@ public class ComponentManipulationTests {
 
     [Test]
     public void OverwritingComponentDoesNotCreateDuplicate() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
         var initialArchetype = world.entityArchetypes[e.Id];
 
-        world.AddComponents(e, new ComponentA()); // Adding the same component again
+        world.Add(e, new ComponentA()); // Adding the same component again
 
         var finalArchetype = world.entityArchetypes[e.Id];
 
@@ -114,32 +119,32 @@ public class ComponentManipulationTests {
 
     [Test]
     public void ModifyingComponentDoesNotChangeArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA { Value = 10 });
+        world.Add(e, new ComponentA { Value = 10 });
         var archetypeBefore = world.entityArchetypes[e.Id];
 
-        ref var component = ref world.Ref<ComponentA>(e);
+        ref var component = ref world.RefComponentA(e);
         component.Value = 20;
 
         var archetypeAfter = world.entityArchetypes[e.Id];
 
         Assert.That(archetypeBefore, Is.EqualTo(archetypeAfter)); // Archetype should not change
-        Assert.That(world.Ref<ComponentA>(e).Value, Is.EqualTo(20));
+        Assert.That(world.RefComponentA(e).Value, Is.EqualTo(20));
 
         e.Destroy();
     }
 
     [Test]
     public void AddingAndRemovingComponentsMultipleTimesDoesNotCorruptSystem() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
 
         for (int i = 0; i < 100; i++) {
-            world.AddComponents(e, new ComponentA());
-            world.RemoveComponents<ComponentA>(e);
+            world.Add(e, new ComponentA());
+            world.RemoveComponentA(e);
         }
 
         var archetype = world.entityArchetypes[e.Id];

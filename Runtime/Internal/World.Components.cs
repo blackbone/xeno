@@ -7,7 +7,7 @@ using Xeno.Vendor;
 
 namespace Xeno {
     public partial class World { // this part class is work with component data, not more or less
-        public Store3[] stores2;
+        internal Store3[] stores2;
         private uint storeCapacity;
 
         private uint pid;
@@ -21,6 +21,11 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InitComponents(in uint storesCount, in uint entitiesCount) {
             stores2 = new Store3[storesCount];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected virtual void ClearGeneratedEntityData(in uint entityId, in BitSetReadOnly mask) {
+            RemoveComponents_Internal(entityId, mask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -268,7 +273,7 @@ namespace Xeno {
                 || HasComponent_Internal<T4>(entityId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref T1 RefComponent_Internal<T1>(in uint entityId)
+        private ref T1 RefComponent_Internal<T1>(uint entityId)
             {
             if (CI<T1>.Index >= stores2.Length) Array.Resize(ref stores2, BitOperations.Smear(CI<T1>.Index) + 1);
             ref var s = ref Unsafe.As<Store3, Store3<T1>>(ref stores2[CI<T1>.Index]);

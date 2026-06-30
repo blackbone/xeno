@@ -779,7 +779,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public global::Xeno.Entity CreateEntity_NoLock(in ").Append(typeName).AppendLine(" component) {");
             sb.Append("        var __xeno_entity = CreateEntityWithMask_NoLock(in ").Append(maskFieldName).AppendLine(");");
-            sb.Append("        ").Append(helperName).AppendLine(".Write(this, __xeno_entity.Id, in component);");
+            sb.Append("        ").Append(helperName).AppendLine(".Write(this, EntityId(in __xeno_entity), in component);");
             sb.AppendLine("        return __xeno_entity;");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -793,8 +793,8 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public void Add_NoLock(in global::Xeno.Entity entity, in ").Append(typeName).AppendLine(" component) {");
-            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
-            sb.AppendLine("        var __xeno_eid = entity.Id;");
+            sb.AppendLine("        if (!IsEntityValid(entity)) return;");
+            sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
             sb.Append("        ").Append(helperName).AppendLine(".Write(this, __xeno_eid, in component);");
             sb.Append("        AddGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(maskFieldName).AppendLine(");");
             sb.AppendLine("    }");
@@ -809,8 +809,8 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public void Remove").Append(apiName).AppendLine("_NoLock(in global::Xeno.Entity entity) {");
-            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
-            sb.AppendLine("        var __xeno_eid = entity.Id;");
+            sb.AppendLine("        if (!IsEntityValid(entity)) return;");
+            sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
             sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
             sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
             sb.Append("        __xeno_ClearPageAt(this.").Append(component.PagesFieldName).AppendLine(", __xeno_pid, __xeno_slot);");
@@ -827,22 +827,22 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public bool TryGet").Append(apiName).Append("(in global::Xeno.Entity entity, out ").Append(typeName).AppendLine(" component) {");
-            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) { component = default; return false; }");
-            sb.Append("        return ").Append(helperName).AppendLine(".TryCopy(this, entity.Id, out component);");
+            sb.AppendLine("        if (!IsEntityValid(entity)) { component = default; return false; }");
+            sb.Append("        return ").Append(helperName).AppendLine(".TryCopy(this, EntityId(in entity), out component);");
             sb.AppendLine("    }");
             sb.AppendLine();
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public ref ").Append(typeName).Append(" Ref").Append(apiName).AppendLine("(in global::Xeno.Entity entity) {");
-            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) throw new global::System.InvalidOperationException();");
+            sb.AppendLine("        if (!IsEntityValid(entity)) throw new global::System.InvalidOperationException();");
             sb.Append("        if (!HasGeneratedMask(entity, in ").Append(maskFieldName).Append(")) __xeno_ThrowMissingComponent(\"").Append(displayName).AppendLine("\");");
-            sb.Append("        return ref ").Append(helperName).AppendLine(".Ref(this, entity.Id);");
+            sb.Append("        return ref ").Append(helperName).AppendLine(".Ref(this, EntityId(in entity));");
             sb.AppendLine("    }");
             sb.AppendLine();
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public bool Has").Append(apiName).AppendLine("(in global::Xeno.Entity entity) {");
-            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return false;");
+            sb.AppendLine("        if (!IsEntityValid(entity)) return false;");
             sb.Append("        return HasGeneratedMask(entity, in ").Append(maskFieldName).AppendLine(");");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -887,8 +887,8 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             {
                 sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
                 sb.Append("    public void ").Append(method.MethodName).Append("_NoLock(in global::Xeno.Entity entity) {").AppendLine();
-                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
-                sb.AppendLine("        var __xeno_eid = entity.Id;");
+                sb.AppendLine("        if (!IsEntityValid(entity)) return;");
+                sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
                 sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
                 sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
                 for (var i = 0; i < componentInfos.Length; i++)
@@ -910,7 +910,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
                 sb.Append("        var __xeno_entity = CreateEntityWithMask_NoLock(in ").Append(set.MaskFieldName).AppendLine(");");
                 for (var i = 0; i < componentInfos.Length; i++)
                 {
-                    sb.Append("        ").Append(componentInfos[i].HelperName).Append(".Write(this, __xeno_entity.Id, in ")
+                    sb.Append("        ").Append(componentInfos[i].HelperName).Append(".Write(this, EntityId(in __xeno_entity), in ")
                         .Append(parameterNames[i]).AppendLine(");");
                 }
                 sb.AppendLine("        return __xeno_entity;");
@@ -927,8 +927,8 @@ public sealed class WorldSourceGenerator : ISourceGenerator
                 sb.Append("    public void Add_NoLock(in global::Xeno.Entity entity, ")
                     .Append(string.Join(", ", componentInfos.Select((component, index) => $"in {TypeName(component.Type)} {parameterNames[index]}")))
                     .AppendLine(") {");
-                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
-                sb.AppendLine("        var __xeno_eid = entity.Id;");
+                sb.AppendLine("        if (!IsEntityValid(entity)) return;");
+                sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
                 for (var i = 0; i < componentInfos.Length; i++)
                 {
                     sb.Append("        ").Append(componentInfos[i].HelperName).Append(".Write(this, __xeno_eid, in ")
@@ -953,7 +953,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             if (method.Kind == RequestedApiMethodKind.HasAll)
             {
-                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return false;");
+                sb.AppendLine("        if (!IsEntityValid(entity)) return false;");
                 sb.Append("        return HasGeneratedMask(entity, in ").Append(set.MaskFieldName).AppendLine(");");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -962,7 +962,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             if (method.Kind == RequestedApiMethodKind.HasAny)
             {
-                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return false;");
+                sb.AppendLine("        if (!IsEntityValid(entity)) return false;");
                 sb.Append("        return ").Append(string.Join(" || ", componentInfos.Select(component => $"HasGeneratedMask(entity, in {FindComponentSet(componentSets, new[] { component }).MaskFieldName})"))).AppendLine(";");
                 sb.AppendLine("    }");
                 sb.AppendLine();

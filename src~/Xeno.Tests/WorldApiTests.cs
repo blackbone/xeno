@@ -1,10 +1,12 @@
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class WorldApiCreationTests {
     [Test]
     public void World_Create() {
-        var world = Worlds.Create("world");
+        var world = TestWorlds.Create("world");
         world.Dispose();
     }
 }
@@ -12,7 +14,7 @@ public class WorldApiCreationTests {
 [TestFixture]
 public class WorldEntityCreationTests {
     [SetUp]
-    public void OneTimeSetUp() => Worlds.Create("world");
+    public void OneTimeSetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void OneTimeTearDown() {
@@ -22,7 +24,7 @@ public class WorldEntityCreationTests {
 
     [Test]
     public void CreateEntity() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity();
 
         Assert.That(e.IsValid());
@@ -35,18 +37,18 @@ public class WorldEntityCreationTests {
 
     [Test]
     public void CreateEntity_1() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity(new Component1 { Value = 1 });
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(e.HasComponent<Component1>());
+        Assert.That(world.HasComponent1(e));
 
-        e.RemoveComponents<Component1>();
+        world.RemoveComponent1(e);
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(!e.HasComponent<Component1>());
+        Assert.That(!world.HasComponent1(e));
 
         e.Destroy();
 
@@ -56,7 +58,7 @@ public class WorldEntityCreationTests {
 
     [Test]
     public void CreateEntity_2() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity(
             new Component1 { Value = 1 },
             new Component2 { Value = 2 }
@@ -64,13 +66,13 @@ public class WorldEntityCreationTests {
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(e.HasAllComponents<Component1, Component2>());
+        Assert.That(world.HasComponent1AndComponent2(e));
 
-        e.RemoveComponents<Component1>();
+        world.RemoveComponent1(e);
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(!e.HasAllComponents<Component1, Component2>());
+        Assert.That(!world.HasComponent1AndComponent2(e));
 
         e.Destroy();
 
@@ -80,7 +82,7 @@ public class WorldEntityCreationTests {
 
     [Test]
     public void CreateEntity_3() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity(
             new Component1 { Value = 1 },
             new Component2 { Value = 2 },
@@ -89,13 +91,13 @@ public class WorldEntityCreationTests {
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(e.HasAllComponents<Component1, Component2, Component3>());
+        Assert.That(world.HasComponent1AndComponent2AndComponent3(e));
 
-        e.RemoveComponents<Component1>();
+        world.RemoveComponent1(e);
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(!e.HasAllComponents<Component1, Component2, Component3>());
+        Assert.That(!world.HasComponent1AndComponent2AndComponent3(e));
 
         e.Destroy();
 
@@ -105,7 +107,7 @@ public class WorldEntityCreationTests {
 
     [Test]
     public void CreateEntity_4() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e = world.CreateEntity(
             new Component1 { Value = 1 },
             new Component2 { Value = 2 },
@@ -115,13 +117,13 @@ public class WorldEntityCreationTests {
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(e.HasAllComponents<Component1, Component2, Component3, Component4>());
+        Assert.That(world.HasComponent1AndComponent2AndComponent3AndComponent4(e));
 
-        e.RemoveComponents<Component1>();
+        world.RemoveComponent1(e);
 
         Assert.That(e.IsValid());
         Assert.That(world.EntityCount, Is.EqualTo(1));
-        Assert.That(!e.HasAllComponents<Component1, Component2, Component3, Component4>());
+        Assert.That(!world.HasComponent1AndComponent2AndComponent3AndComponent4(e));
 
         e.Destroy();
 

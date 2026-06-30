@@ -14,7 +14,7 @@ namespace Xeno
     /// Component Info. Static class with all necessary variables.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public static class CI<T>
+    internal static class CI<T>
     {
         public static T Default = default;
         public static readonly int Index = ComponentInfo.Index++;
@@ -30,7 +30,7 @@ namespace Xeno
         }
     }
 
-    public static class CI<T1, T2> {
+    internal static class CI<T1, T2> {
         internal static readonly int Max = Math.Max(CI<T1>.Index, CI<T2>.Index);
         public static readonly int MaskSize = BitSet.MaskSize(Max);
         public static BitSetReadOnly Mask;
@@ -44,7 +44,7 @@ namespace Xeno
         }
     }
 
-    public static class CI<T1, T2, T3> {
+    internal static class CI<T1, T2, T3> {
         public static readonly int Max = Math.Max(CI<T1, T2>.Max, CI<T3>.Index);
         public static readonly int MaskSize = BitSet.MaskSize(Max);
         public static BitSetReadOnly Mask;
@@ -58,7 +58,7 @@ namespace Xeno
         }
     }
 
-    public static class CI<T1, T2, T3, T4> {
+    internal static class CI<T1, T2, T3, T4> {
         private static readonly int Max = Math.Max(CI<T1, T2>.Max, CI<T3, T4>.Max);
         public static readonly int MaskSize = BitSet.MaskSize(Max);
         public static BitSetReadOnly Mask;

@@ -13,7 +13,13 @@ public static class MurMur
         var remainder = length & 3;
         var position = length - remainder;
         for (var start = 0; start < position; start += 4)
-            h1 = (uint) ((int) RotateLeft(h1 ^ RotateLeft(BitConverter.ToUInt32(bytes.Slice(start, 4)) * 3432918353U,15) * 461845907U, 13) * 5 - 430675100);
+        {
+            var block = (uint)(bytes[start]
+                               | bytes[start + 1] << 8
+                               | bytes[start + 2] << 16
+                               | bytes[start + 3] << 24);
+            h1 = (uint)((int)RotateLeft(h1 ^ RotateLeft(block * 3432918353U, 15) * 461845907U, 13) * 5 - 430675100);
+        }
 
         if (remainder > 0)
         {

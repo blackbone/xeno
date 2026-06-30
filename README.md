@@ -55,13 +55,26 @@ World-specific code generation is driven by attributes on a partial `World` subt
 
 ```csharp
 [RegisterComponent(typeof(Position))]
+[RegisterComponent(typeof(Velocity))]
 [RegisterSystem(typeof(MovementSystem))]
-public partial class GameWorld : World { }
+public partial class GameWorld : World {
+    public partial Entity CreateEntity(in Position position, in Velocity velocity);
+}
 ```
 
 The generator emits the world constructor, typed store/page caches, system delegates, and direct `Start`,
 `Tick`, and `Stop` overrides. Components can be registered explicitly or inferred from registered system
-method parameters.
+method parameters. Generated worlds are instantiated directly and own the full component API:
+
+```csharp
+var world = new GameWorld("main");
+var entity = world.CreateEntity(new Position(), new Velocity());
+ref var position = ref world.RefPosition(entity);
+var positions = world.CountPosition();
+```
+
+Do not declare constructors in partial worlds and do not use `Worlds.Create(...)` or manual runtime
+system registration for new code.
 
 # Roadmap
 

@@ -1,9 +1,11 @@
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class ArchetypeTransitionTests {
     [SetUp]
-    public void SetUp() => Worlds.Create("world");
+    public void SetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void TearDown() {
@@ -13,7 +15,7 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void EntityStartsInEmptyArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
 
@@ -25,12 +27,12 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void AddingComponentMovesEntityToNewArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
         var oldArchetype = world.entityArchetypes[e.Id];
 
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
 
         var newArchetype = world.entityArchetypes[e.Id];
 
@@ -43,13 +45,13 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void RemovingComponentMovesEntityBackToEmptyArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
         var newArchetype = world.entityArchetypes[e.Id];
 
-        world.RemoveComponents<ComponentA>(e);
+        world.RemoveComponentA(e);
 
         Assert.That(world.entityArchetypes[e.Id], Is.EqualTo(world.zeroArchetype));
         Assert.That(newArchetype.entitiesCount, Is.EqualTo(0));
@@ -60,16 +62,15 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void AddingMultipleComponentsCreatesCorrectArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
-        world.AddComponents(e, new ComponentB());
+        world.Add(e, new ComponentA());
+        world.Add(e, new ComponentB());
 
         var archetype = world.entityArchetypes[e.Id];
 
-        Assert.That(archetype.mask.Get(CI<ComponentA>.Index), Is.True);
-        Assert.That(archetype.mask.Get(CI<ComponentB>.Index), Is.True);
+        Assert.That(world.HasComponentAAndComponentB(e), Is.True);
         Assert.That(archetype.entitiesCount, Is.EqualTo(1));
 
         e.Destroy();
@@ -77,19 +78,19 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void RemovingOneComponentPreservesOtherComponents() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
-        world.AddComponents(e, new ComponentB());
+        world.Add(e, new ComponentA());
+        world.Add(e, new ComponentB());
         var archetypeBefore = world.entityArchetypes[e.Id];
 
-        world.RemoveComponents<ComponentA>(e);
+        world.RemoveComponentA(e);
         var archetypeAfter = world.entityArchetypes[e.Id];
 
         Assert.That(archetypeBefore, Is.Not.EqualTo(archetypeAfter));
-        Assert.That(archetypeAfter.mask.Get(CI<ComponentA>.Index), Is.False);
-        Assert.That(archetypeAfter.mask.Get(CI<ComponentB>.Index), Is.True);
+        Assert.That(world.HasComponentA(e), Is.False);
+        Assert.That(world.HasComponentB(e), Is.True);
         Assert.That(archetypeAfter.entitiesCount, Is.EqualTo(1));
 
         e.Destroy();
@@ -97,20 +98,20 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void EntityCanMoveBetweenMultipleArchetypes() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
 
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
         var archetypeA = world.entityArchetypes[e.Id];
 
-        world.AddComponents(e, new ComponentB());
+        world.Add(e, new ComponentB());
         var archetypeAB = world.entityArchetypes[e.Id];
 
-        world.RemoveComponents<ComponentA>(e);
+        world.RemoveComponentA(e);
         var archetypeB = world.entityArchetypes[e.Id];
 
-        world.RemoveComponents<ComponentB>(e);
+        world.RemoveComponentB(e);
         var archetypeEmpty = world.entityArchetypes[e.Id];
 
         Assert.That(archetypeA, Is.Not.EqualTo(archetypeAB));
@@ -123,12 +124,13 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void MovingEntityBetweenArchetypesMaintainsCorrectIndex() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
 
-        world.AddComponents(e1, new ComponentA());
+        world.Add(e1, new ComponentA());
+        world.Tick(0f);
 
         Assert.That(world.inArchetypeLocalIndices[e1.Id], Is.EqualTo(0));
         Assert.That(world.inArchetypeLocalIndices[e2.Id], Is.EqualTo(0));
@@ -139,14 +141,14 @@ public class ArchetypeTransitionTests {
 
     [Test]
     public void RemovingAllComponentsMovesEntityToDefaultArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
-        world.AddComponents(e, new ComponentB());
+        world.Add(e, new ComponentA());
+        world.Add(e, new ComponentB());
 
-        world.RemoveComponents<ComponentA>(e);
-        world.RemoveComponents<ComponentB>(e);
+        world.RemoveComponentA(e);
+        world.RemoveComponentB(e);
 
         Assert.That(world.entityArchetypes[e.Id], Is.EqualTo(world.zeroArchetype));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));

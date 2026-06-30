@@ -6,6 +6,8 @@ namespace Xeno
     public sealed class SystemMethodAttribute : Attribute
     {
         public SystemMethodAttribute(SystemMethodType method, int order = 0) { }
+
+        public bool NoFuse { get; set; }
     }
     
     public enum SystemMethodType

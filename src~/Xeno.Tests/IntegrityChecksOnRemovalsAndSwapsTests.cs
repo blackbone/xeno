@@ -1,9 +1,12 @@
+using System;
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class IntegrityChecksOnRemovalsAndSwapsTests {
     [SetUp]
-    public void SetUp() => Worlds.Create("world");
+    public void SetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void TearDown() {
@@ -13,10 +16,10 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void EntityDeletionDoesNotBreakArchetypeIntegrity() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
 
         var archetypeBefore = world.entityArchetypes[e.Id];
 
@@ -29,12 +32,12 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void LastEntitySwapWorksCorrectlyWhenRemovingEntities() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
-        world.AddComponents(e1, new ComponentA());
-        world.AddComponents(e2, new ComponentA());
+        world.Add(e1, new ComponentA());
+        world.Add(e2, new ComponentA());
 
         var archetype = world.entityArchetypes[e1.Id];
 
@@ -47,12 +50,12 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void InArchetypeLocalIndicesRemainsValidWhenSwapping() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
-        world.AddComponents(e1, new ComponentA());
-        world.AddComponents(e2, new ComponentA());
+        world.Add(e1, new ComponentA());
+        world.Add(e2, new ComponentA());
 
         var archetype = world.entityArchetypes[e1.Id];
 
@@ -65,10 +68,10 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void RemovingLastEntityInArchetypeDoesNotCauseOutOfBoundsAccess() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
 
         var archetype = world.entityArchetypes[e.Id];
         Assert.DoesNotThrow(() => e.Destroy());
@@ -79,12 +82,12 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void EntityOrderCorrectnessWhenSwappingLastEntity() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
-        world.AddComponents(e1, new ComponentA());
-        world.AddComponents(e2, new ComponentA());
+        world.Add(e1, new ComponentA());
+        world.Add(e2, new ComponentA());
 
         var archetype = world.entityArchetypes[e1.Id];
 
@@ -96,12 +99,12 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void DeletingAllEntitiesInAnArchetypeResetsEntityCountToZero() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
-        world.AddComponents(e1, new ComponentA());
-        world.AddComponents(e2, new ComponentA());
+        world.Add(e1, new ComponentA());
+        world.Add(e2, new ComponentA());
 
         var archetype1 = world.entityArchetypes[e1.Id];
         var archetype2 = world.entityArchetypes[e1.Id];
@@ -121,14 +124,14 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void RemovingEntityInMiddleDoesNotShiftUnrelatedEntityIndices() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
         var e3 = world.CreateEntity();
-        world.AddComponents(e1, new ComponentA());
-        world.AddComponents(e2, new ComponentA());
-        world.AddComponents(e3, new ComponentA());
+        world.Add(e1, new ComponentA());
+        world.Add(e2, new ComponentA());
+        world.Add(e3, new ComponentA());
 
         var archetype = world.entityArchetypes[e1.Id];
         var e2IndexBefore = world.inArchetypeLocalIndices[e2.Id];
@@ -141,11 +144,11 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void EntityRemovalsDoNotCauseMemoryLeaks() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var initialEntityCount = world.zeroArchetype.entitiesCount;
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
 
         e.Destroy();
         var afterRemovalCount = world.zeroArchetype.entitiesCount;
@@ -155,12 +158,12 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void EntitySwappingDoesNotCorruptArchetypeStorage() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
-        world.AddComponents(e1, new ComponentA());
-        world.AddComponents(e2, new ComponentA());
+        world.Add(e1, new ComponentA());
+        world.Add(e2, new ComponentA());
 
         var archetype = world.entityArchetypes[e1.Id];
 
@@ -173,10 +176,10 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
     [Test]
     public void EmptyArchetypeGetsProperlyRemovedWhenNoEntitiesRemain() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
-        world.AddComponents(e, new ComponentA());
+        world.Add(e, new ComponentA());
         e.Destroy();
 
         Assert.That(world.entityArchetypes[e.Id], Is.Null);

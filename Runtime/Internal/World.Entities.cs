@@ -13,7 +13,7 @@ namespace Xeno {
         internal uint[] freeIds;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsEntityValid_Internal(in Entity entity) {
+        protected bool IsEntityValid_Internal(in Entity entity) {
             if (entity.WorldId != Id) return false;
             if (entity.Id >= entities.Length) return false;
             return entities[entity.Id].Version == entity.Version;
@@ -25,7 +25,6 @@ namespace Xeno {
             entities = Array.Empty<Entity>();
             freeIdsCount = 0;
             freeIds = Array.Empty<uint>();
-            buffer = Array.Empty<uint>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

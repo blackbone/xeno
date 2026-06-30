@@ -1,9 +1,11 @@
 <Project>
     <PropertyGroup>
-        <OutputPath>./src~\.bin\$(Configuration)</OutputPath>
-        <IntermediateOutputPath>./src~\.obj\$(Configuration)</IntermediateOutputPath>
-        <BaseIntermediateOutputPath>./src~\.obj\$(Configuration)</BaseIntermediateOutputPath>
-        <MSBUildProjectExtensionsPath>./src~\.obj</MSBUildProjectExtensionsPath>
+        <ArtifactsDir>$(MSBuildThisFileDirectory)src~/</ArtifactsDir>
+        <BaseOutputPath>$(ArtifactsDir).bin/$(MSBuildProjectName)/</BaseOutputPath>
+        <OutputPath>$(BaseOutputPath)$(Configuration)/</OutputPath>
+        <BaseIntermediateOutputPath>$(ArtifactsDir).obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+        <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Configuration)/</IntermediateOutputPath>
+        <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
         <XenoOwnerThreadGuardAsserts>true</XenoOwnerThreadGuardAsserts>
         <DefineConstants Condition="'$(XenoOwnerThreadGuardAsserts)' == 'true'">$(DefineConstants);XENO_OWNER_THREAD_GUARD_ASSERTS</DefineConstants>
     </PropertyGroup>

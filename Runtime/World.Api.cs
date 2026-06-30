@@ -51,6 +51,9 @@ namespace Xeno {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsEntityValid(in Entity entity) => IsEntityValid_Internal(entity);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static uint EntityId(in Entity entity) => entity.Id;
+
         public override string ToString() => $"{Name} ({Id})";
 
         private ulong _ticks;

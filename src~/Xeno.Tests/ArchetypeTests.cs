@@ -1,9 +1,11 @@
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class ArchetypeTests {
     [SetUp]
-    public void OneTimeSetUp() => Worlds.Create("world");
+    public void OneTimeSetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void OneTimeTearDown() {
@@ -21,7 +23,7 @@ public class ArchetypeTests {
 
     [Test]
     public void OneEntityPass() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
 
@@ -30,20 +32,20 @@ public class ArchetypeTests {
         Assert.That(world.inArchetypeLocalIndices[e.Id], Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.AddComponents(default(Component1));
+        world.Add(e, default(Component1));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         var firstArchetype = world.entityArchetypes[e.Id];
         Assert.That(firstArchetype, Is.Not.EqualTo(world.zeroArchetype));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(firstArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.AddComponents(default(Component2));
+        world.Add(e, default(Component2));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
 
@@ -52,15 +54,15 @@ public class ArchetypeTests {
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(secondArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.AddComponents(default(Component3));
+        world.Add(e, default(Component3));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3, Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3AndComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -70,20 +72,20 @@ public class ArchetypeTests {
         Assert.That(thirdArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(thirdArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.AddComponents(default(Component4));
+        world.Add(e, default(Component4));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -94,20 +96,20 @@ public class ArchetypeTests {
         Assert.That(fourthArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(fourthArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.RemoveComponents<Component1>();
+        world.RemoveComponent1(e);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -119,20 +121,20 @@ public class ArchetypeTests {
         Assert.That(fifthArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(fifthArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.RemoveComponents<Component2>();
+        world.RemoveComponent2(e);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -145,20 +147,20 @@ public class ArchetypeTests {
         Assert.That(sixthArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(sixthArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.RemoveComponents<Component3>();
+        world.RemoveComponent3(e);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -172,20 +174,20 @@ public class ArchetypeTests {
         Assert.That(seventhArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(seventhArchetype.entities[world.inArchetypeLocalIndices[e.Id]], Is.EqualTo(e.Id));
 
-        e.RemoveComponents<Component4>();
+        world.RemoveComponent4(e);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -212,7 +214,7 @@ public class ArchetypeTests {
 
     [Test]
     public void TwoEntitiesPass() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
 
@@ -228,28 +230,28 @@ public class ArchetypeTests {
         Assert.That(world.inArchetypeLocalIndices[e2.Id], Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.AddComponents(default(Component1));
+        world.Add(e1, default(Component1));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));
         var firstArchetype = world.entityArchetypes[e1.Id];
         Assert.That(firstArchetype, Is.Not.EqualTo(world.zeroArchetype));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(firstArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.AddComponents(default(Component1));
+        world.Add(e2, default(Component1));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype, Is.Not.EqualTo(world.zeroArchetype));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(firstArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.AddComponents(default(Component2));
+        world.Add(e1, default(Component2));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(1));
 
@@ -258,11 +260,11 @@ public class ArchetypeTests {
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(secondArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.AddComponents(default(Component2));
+        world.Add(e2, default(Component2));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(2));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
 
@@ -270,15 +272,15 @@ public class ArchetypeTests {
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(secondArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.AddComponents(default(Component3));
+        world.Add(e1, default(Component3));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3, Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3AndComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(1));
@@ -288,15 +290,15 @@ public class ArchetypeTests {
         Assert.That(thirdArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(thirdArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.AddComponents(default(Component3));
+        world.Add(e2, default(Component3));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3, Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3AndComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(2));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -305,20 +307,20 @@ public class ArchetypeTests {
         Assert.That(thirdArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(thirdArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.AddComponents(default(Component4));
+        world.Add(e1, default(Component4));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -329,20 +331,20 @@ public class ArchetypeTests {
         Assert.That(fourthArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(fourthArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.AddComponents(default(Component4));
+        world.Add(e2, default(Component4));
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(2));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -352,20 +354,20 @@ public class ArchetypeTests {
         Assert.That(fourthArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(fourthArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.RemoveComponents<Component1>();
+        world.RemoveComponent1(e1);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(1));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -377,20 +379,20 @@ public class ArchetypeTests {
         Assert.That(fifthArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(fifthArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.RemoveComponents<Component1>();
+        world.RemoveComponent1(e2);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -401,20 +403,20 @@ public class ArchetypeTests {
         Assert.That(fifthArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(fifthArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.RemoveComponents<Component2>();
+        world.RemoveComponent2(e1);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -427,20 +429,20 @@ public class ArchetypeTests {
         Assert.That(sixthArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(sixthArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.RemoveComponents<Component2>();
+        world.RemoveComponent2(e2);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -452,20 +454,20 @@ public class ArchetypeTests {
         Assert.That(sixthArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(sixthArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.RemoveComponents<Component3>();
+        world.RemoveComponent3(e1);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -479,20 +481,20 @@ public class ArchetypeTests {
         Assert.That(seventhArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(seventhArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.RemoveComponents<Component3>();
+        world.RemoveComponent3(e2);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(2));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -505,20 +507,20 @@ public class ArchetypeTests {
         Assert.That(seventhArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(seventhArchetype.entities[world.inArchetypeLocalIndices[e2.Id]], Is.EqualTo(e2.Id));
 
-        e1.RemoveComponents<Component4>();
+        world.RemoveComponent4(e1);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(1));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));
@@ -533,20 +535,20 @@ public class ArchetypeTests {
         Assert.That(eigthArchetype.entitiesCount, Is.EqualTo(1));
         Assert.That(eigthArchetype.entities[world.inArchetypeLocalIndices[e1.Id]], Is.EqualTo(e1.Id));
 
-        e2.RemoveComponents<Component4>();
+        world.RemoveComponent4(e2);
 
-        Assert.That(world.Count<Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component2, Component3, Component4>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component4, Component1, Component2>(), Is.EqualTo(0));
-        Assert.That(world.Count<Component1, Component2, Component3, Component4>(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3(), Is.EqualTo(0));
+        Assert.That(world.CountComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
+        Assert.That(world.CountComponent4AndComponent1AndComponent2(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2AndComponent3AndComponent4(), Is.EqualTo(0));
         Assert.That(world.zeroArchetype.entitiesCount, Is.EqualTo(2));
         Assert.That(firstArchetype.entitiesCount, Is.EqualTo(0));
         Assert.That(secondArchetype.entitiesCount, Is.EqualTo(0));

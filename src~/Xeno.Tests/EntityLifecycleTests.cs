@@ -1,9 +1,12 @@
+using System.Collections.Generic;
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class EntityLifecycleTests {
     [SetUp]
-    public void SetUp() => Worlds.Create("world");
+    public void SetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void TearDown() {
@@ -13,7 +16,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void CreateSingleEntity() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
 
@@ -27,7 +30,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void CreateMultipleEntities() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
@@ -48,7 +51,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void ReuseEntityIdsAfterDeletion() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
@@ -67,7 +70,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void IncrementVersionOnReuse() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var version1 = e1.Version;
@@ -85,7 +88,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void InvalidEntityDeletionIsIgnored() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = new Entity(); // Non-existent entity
 
@@ -94,7 +97,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void DeletingEntityRemovesItFromArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e = world.CreateEntity();
         e.Destroy();
@@ -105,7 +108,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void DeletingAllEntitiesAndRecreatingDoesNotCorruptIndices() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var e1 = world.CreateEntity();
         var e2 = world.CreateEntity();
@@ -130,7 +133,7 @@ public class EntityLifecycleTests {
 
     [Test]
     public void CreatingEntitiesBeyondInitialCapacityDoesNotCrash() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
 
         var entities = new List<Entity>();
 

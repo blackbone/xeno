@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Xeno
@@ -8,9 +9,9 @@ namespace Xeno
     [StructLayout(LayoutKind.Sequential)]
     public partial struct Entity
     {
-        internal uint Id;
-        internal uint Version;
-        internal ushort WorldId;
+        public uint Id;
+        public uint Version;
+        public ushort WorldId;
 
         public override string ToString() => $"[{WorldId}|{Id}({Version})]{GetArchetype()}";
 

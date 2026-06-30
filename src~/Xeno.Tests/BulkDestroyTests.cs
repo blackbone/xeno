@@ -1,9 +1,11 @@
+using NUnit.Framework;
+
 namespace Xeno.Tests;
 
 [TestFixture]
 public class BulkDestroyTests {
     [SetUp]
-    public void SetUp() => Worlds.Create("world");
+    public void SetUp() => TestWorlds.Create("world");
 
     [TearDown]
     public void TearDown() {
@@ -15,7 +17,7 @@ public class BulkDestroyTests {
 
     [Test]
     public void DestroyEntities_InvalidatesAndRecyclesIdsWithoutLettingStaleHandlesDeleteReusedSlots() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var stale = world.CreateEntity();
 
         world.DestroyEntities(new[] { stale });
@@ -35,8 +37,8 @@ public class BulkDestroyTests {
 
     [Test]
     public void DestroyEntities_IgnoresDuplicateStaleAndForeignEntities() {
-        Worlds.TryGet("world", out var world);
-        var foreignWorld = Worlds.Create("foreign");
+        var world = TestWorlds.Get("world");
+        var foreignWorld = TestWorlds.Create("foreign");
         var duplicate = world.CreateEntity();
         var stale = world.CreateEntity();
 
@@ -55,7 +57,7 @@ public class BulkDestroyTests {
 
     [Test]
     public void DestroyEntities_DeletesEmptyEntitiesFromZeroArchetype() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var entities = new Entity[16];
         for (var i = 0; i < entities.Length; i++)
             entities[i] = world.CreateEntity();
@@ -70,7 +72,7 @@ public class BulkDestroyTests {
 
     [Test]
     public void DestroyEntities_ClearsComponentDataAndCountsForOneToFourComponentArchetypes() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var e1 = world.CreateEntity(new ComponentA { Value = 11 });
         var e2 = world.CreateEntity(new ComponentA { Value = 21 }, new ComponentB { Value = 22 });
         var e3 = world.CreateEntity(new Component_1(), new Component_2(), new Component_3());
@@ -79,19 +81,24 @@ public class BulkDestroyTests {
         world.DestroyEntities(new[] { e1, e2, e3, e4 });
 
         Assert.That(world.EntityCount, Is.Zero);
-        Assert.That(world.Count<ComponentA>(), Is.Zero);
-        Assert.That(world.Count<ComponentA, ComponentB>(), Is.Zero);
-        Assert.That(world.Count<Component_1, Component_2, Component_3>(), Is.Zero);
-        Assert.That(world.Count<Component_4, Component_5, Component_6, Component_7>(), Is.Zero);
+        Assert.That(world.CountComponentA(), Is.Zero);
+        Assert.That(world.CountComponentAAndComponentB(), Is.Zero);
+        Assert.That(world.CountComponent_1AndComponent_2AndComponent_3(), Is.Zero);
+        Assert.That(world.CountComponent_4AndComponent_5AndComponent_6AndComponent_7(), Is.Zero);
+        var r1 = world.CreateEntity(new ComponentA { Value = 101 });
+        var r2 = world.CreateEntity(new ComponentA { Value = 102 });
+        var r3 = world.CreateEntity(new ComponentA { Value = 103 });
+        var r4 = world.CreateEntity(new ComponentA { Value = 104 });
 
-        var componentAStore = world.GetStore<ComponentA>();
-        Assert.That(componentAStore.pages[e1.Id >> Store3.Shift][e1.Id & Store3.Mask].Value, Is.Zero);
-        Assert.That(componentAStore.pages[e2.Id >> Store3.Shift][e2.Id & Store3.Mask].Value, Is.Zero);
+        Assert.That(r3.Id, Is.EqualTo(e2.Id));
+        Assert.That(r4.Id, Is.EqualTo(e1.Id));
+        Assert.That(world.RefComponentA(r3).Value, Is.EqualTo(103));
+        Assert.That(world.RefComponentA(r4).Value, Is.EqualTo(104));
     }
 
     [Test]
     public void DestroyEntities_PreservesSwappedEntityLocalIndexWhenDeletingMiddleEntity() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var entities = new Entity[5];
         for (var i = 0; i < entities.Length; i++)
             entities[i] = world.CreateEntity(new ComponentA { Value = i });
@@ -110,18 +117,18 @@ public class BulkDestroyTests {
 
     [Test]
     public void DestroyEntities_ReturnsEmptyFloatingArchetypeForReuse() {
-        Worlds.TryGet("world", out var world);
+        var world = TestWorlds.Get("world");
         var entity = world.CreateEntity(new ComponentA { Value = 1 });
         var archetype = world.entityArchetypes[entity.Id];
 
         world.DestroyEntities(new[] { entity });
 
         Assert.That(archetype.entitiesCount, Is.Zero);
-        Assert.That(world.Count<ComponentA>(), Is.Zero);
+        Assert.That(world.CountComponentA(), Is.Zero);
 
         var replacement = world.CreateEntity(new ComponentA { Value = 2 });
 
         Assert.That(ReferenceEquals(world.entityArchetypes[replacement.Id], archetype), Is.True);
-        Assert.That(world.Count<ComponentA>(), Is.EqualTo(1));
+        Assert.That(world.CountComponentA(), Is.EqualTo(1));
     }
 }

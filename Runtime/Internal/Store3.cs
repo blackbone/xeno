@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Xeno {
     [Serializable]
-    public abstract class Store3 {
+    internal abstract class Store3 {
         public const int Shift = 6;
         public const int Cap = Mask + 1;
         public const int Mask = (1 << Shift) - 1;
@@ -13,7 +13,7 @@ namespace Xeno {
     }
 
     [Serializable]
-    public class Store3<T> : Store3 {
+    internal class Store3<T> : Store3 {
         public T[][] pages;
 
         public Store3() : this(32) {
