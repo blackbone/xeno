@@ -99,12 +99,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         public string RemoveTargetCacheFieldName;
         public string QuerySlotsFieldName;
         public string QueryPageCountsFieldName;
-        public string QueryFullPagesFieldName;
-        public string QueryFullPageIndicesFieldName;
-        public string QueryFullPageCountFieldName;
-        public string QueryPartialPagesFieldName;
-        public string QueryPartialPageIndicesFieldName;
-        public string QueryPartialPageCountFieldName;
+        public string QueryPageStatesFieldName;
         public string QueryCountFieldName;
         public bool MaterializedQuery;
         public int TransitionKey;
@@ -582,12 +577,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
                 RemoveTargetCacheFieldName = $"__xeno_remove_target_{name}",
                 QuerySlotsFieldName = $"__xeno_query_{name}_slots",
                 QueryPageCountsFieldName = $"__xeno_query_{name}_pageCounts",
-                QueryFullPagesFieldName = $"__xeno_query_{name}_fullPages",
-                QueryFullPageIndicesFieldName = $"__xeno_query_{name}_fullPageIndices",
-                QueryFullPageCountFieldName = $"__xeno_query_{name}_fullPageCount",
-                QueryPartialPagesFieldName = $"__xeno_query_{name}_partialPages",
-                QueryPartialPageIndicesFieldName = $"__xeno_query_{name}_partialPageIndices",
-                QueryPartialPageCountFieldName = $"__xeno_query_{name}_partialPageCount",
+                QueryPageStatesFieldName = $"__xeno_query_{name}_pageStates",
                 QueryCountFieldName = $"__xeno_query_{name}_count",
                 MaterializedQuery = materialized.Contains(key),
                 TransitionKey = sets.Count + 1,
@@ -697,12 +687,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             {
                 sb.Append("    private ulong[] ").Append(set.QuerySlotsFieldName).AppendLine(";");
                 sb.Append("    private int[] ").Append(set.QueryPageCountsFieldName).AppendLine(";");
-                sb.Append("    private int[] ").Append(set.QueryFullPagesFieldName).AppendLine(";");
-                sb.Append("    private int[] ").Append(set.QueryFullPageIndicesFieldName).AppendLine(";");
-                sb.Append("    private int ").Append(set.QueryFullPageCountFieldName).AppendLine(";");
-                sb.Append("    private int[] ").Append(set.QueryPartialPagesFieldName).AppendLine(";");
-                sb.Append("    private int[] ").Append(set.QueryPartialPageIndicesFieldName).AppendLine(";");
-                sb.Append("    private int ").Append(set.QueryPartialPageCountFieldName).AppendLine(";");
+                sb.Append("    private ulong[] ").Append(set.QueryPageStatesFieldName).AppendLine(";");
                 sb.Append("    private int ").Append(set.QueryCountFieldName).AppendLine(";");
             }
         }
@@ -760,14 +745,8 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             sb.Append("            global::System.Array.Resize(ref ").Append(set.QuerySlotsFieldName).AppendLine(", __xeno_pageCount);");
             sb.Append("        if (").Append(set.QueryPageCountsFieldName).Append(" == null || ").Append(set.QueryPageCountsFieldName).AppendLine(".Length < __xeno_pageCount)");
             sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPageCountsFieldName).AppendLine(", __xeno_pageCount);");
-            sb.Append("        if (").Append(set.QueryFullPagesFieldName).Append(" == null || ").Append(set.QueryFullPagesFieldName).AppendLine(".Length < __xeno_pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryFullPagesFieldName).AppendLine(", __xeno_pageCount);");
-            sb.Append("        if (").Append(set.QueryFullPageIndicesFieldName).Append(" == null || ").Append(set.QueryFullPageIndicesFieldName).AppendLine(".Length < __xeno_pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryFullPageIndicesFieldName).AppendLine(", __xeno_pageCount);");
-            sb.Append("        if (").Append(set.QueryPartialPagesFieldName).Append(" == null || ").Append(set.QueryPartialPagesFieldName).AppendLine(".Length < __xeno_pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPartialPagesFieldName).AppendLine(", __xeno_pageCount);");
-            sb.Append("        if (").Append(set.QueryPartialPageIndicesFieldName).Append(" == null || ").Append(set.QueryPartialPageIndicesFieldName).AppendLine(".Length < __xeno_pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPartialPageIndicesFieldName).AppendLine(", __xeno_pageCount);");
+            sb.Append("        if (").Append(set.QueryPageStatesFieldName).Append(" == null || ").Append(set.QueryPageStatesFieldName).AppendLine(".Length < ((__xeno_pageCount + 31) >> 5))");
+            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPageStatesFieldName).AppendLine(", (__xeno_pageCount + 31) >> 5);");
         }
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -824,63 +803,22 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             var suffix = QuerySuffix(set);
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("    private void __xeno_AddFullPage_").Append(suffix).AppendLine("(int pid) {");
-            sb.Append("        var __xeno_pageIndex = ").Append(set.QueryFullPageCountFieldName).AppendLine(";");
-            sb.Append("        ").Append(set.QueryFullPagesFieldName).AppendLine("[__xeno_pageIndex] = pid;");
-            sb.Append("        ").Append(set.QueryFullPageIndicesFieldName).AppendLine("[pid] = __xeno_pageIndex + 1;");
-            sb.Append("        ").Append(set.QueryFullPageCountFieldName).AppendLine(" = __xeno_pageIndex + 1;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-
-            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("    private void __xeno_RemoveFullPage_").Append(suffix).AppendLine("(int pid) {");
-            sb.Append("        var __xeno_indexPlusOne = ").Append(set.QueryFullPageIndicesFieldName).AppendLine("[pid];");
-            sb.AppendLine("        if (__xeno_indexPlusOne == 0) return;");
-            sb.AppendLine("        var __xeno_pageIndex = __xeno_indexPlusOne - 1;");
-            sb.Append("        var __xeno_lastIndex = --").Append(set.QueryFullPageCountFieldName).AppendLine(";");
-            sb.Append("        var __xeno_lastPage = ").Append(set.QueryFullPagesFieldName).AppendLine("[__xeno_lastIndex];");
-            sb.Append("        ").Append(set.QueryFullPagesFieldName).AppendLine("[__xeno_pageIndex] = __xeno_lastPage;");
-            sb.Append("        ").Append(set.QueryFullPageIndicesFieldName).AppendLine("[__xeno_lastPage] = __xeno_pageIndex + 1;");
-            sb.Append("        ").Append(set.QueryFullPageIndicesFieldName).AppendLine("[pid] = 0;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-
-            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("    private void __xeno_AddPartialPage_").Append(suffix).AppendLine("(int pid) {");
-            sb.Append("        var __xeno_pageIndex = ").Append(set.QueryPartialPageCountFieldName).AppendLine(";");
-            sb.Append("        ").Append(set.QueryPartialPagesFieldName).AppendLine("[__xeno_pageIndex] = pid;");
-            sb.Append("        ").Append(set.QueryPartialPageIndicesFieldName).AppendLine("[pid] = __xeno_pageIndex + 1;");
-            sb.Append("        ").Append(set.QueryPartialPageCountFieldName).AppendLine(" = __xeno_pageIndex + 1;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-
-            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("    private void __xeno_RemovePartialPage_").Append(suffix).AppendLine("(int pid) {");
-            sb.Append("        var __xeno_indexPlusOne = ").Append(set.QueryPartialPageIndicesFieldName).AppendLine("[pid];");
-            sb.AppendLine("        if (__xeno_indexPlusOne == 0) return;");
-            sb.AppendLine("        var __xeno_pageIndex = __xeno_indexPlusOne - 1;");
-            sb.Append("        var __xeno_lastIndex = --").Append(set.QueryPartialPageCountFieldName).AppendLine(";");
-            sb.Append("        var __xeno_lastPage = ").Append(set.QueryPartialPagesFieldName).AppendLine("[__xeno_lastIndex];");
-            sb.Append("        ").Append(set.QueryPartialPagesFieldName).AppendLine("[__xeno_pageIndex] = __xeno_lastPage;");
-            sb.Append("        ").Append(set.QueryPartialPageIndicesFieldName).AppendLine("[__xeno_lastPage] = __xeno_pageIndex + 1;");
-            sb.Append("        ").Append(set.QueryPartialPageIndicesFieldName).AppendLine("[pid] = 0;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-
-            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    private void __xeno_EnsureQueryCapacity_").Append(suffix).AppendLine("(int pageCount) {");
             sb.Append("        if (").Append(set.QuerySlotsFieldName).Append(" == null || ").Append(set.QuerySlotsFieldName).AppendLine(".Length < pageCount)");
             sb.Append("            global::System.Array.Resize(ref ").Append(set.QuerySlotsFieldName).AppendLine(", pageCount);");
             sb.Append("        if (").Append(set.QueryPageCountsFieldName).Append(" == null || ").Append(set.QueryPageCountsFieldName).AppendLine(".Length < pageCount)");
             sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPageCountsFieldName).AppendLine(", pageCount);");
-            sb.Append("        if (").Append(set.QueryFullPagesFieldName).Append(" == null || ").Append(set.QueryFullPagesFieldName).AppendLine(".Length < pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryFullPagesFieldName).AppendLine(", pageCount);");
-            sb.Append("        if (").Append(set.QueryFullPageIndicesFieldName).Append(" == null || ").Append(set.QueryFullPageIndicesFieldName).AppendLine(".Length < pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryFullPageIndicesFieldName).AppendLine(", pageCount);");
-            sb.Append("        if (").Append(set.QueryPartialPagesFieldName).Append(" == null || ").Append(set.QueryPartialPagesFieldName).AppendLine(".Length < pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPartialPagesFieldName).AppendLine(", pageCount);");
-            sb.Append("        if (").Append(set.QueryPartialPageIndicesFieldName).Append(" == null || ").Append(set.QueryPartialPageIndicesFieldName).AppendLine(".Length < pageCount)");
-            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPartialPageIndicesFieldName).AppendLine(", pageCount);");
+            sb.Append("        if (").Append(set.QueryPageStatesFieldName).Append(" == null || ").Append(set.QueryPageStatesFieldName).AppendLine(".Length < ((pageCount + 31) >> 5))");
+            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryPageStatesFieldName).AppendLine(", (pageCount + 31) >> 5);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private void __xeno_SetQueryPageState_").Append(suffix).AppendLine("(int pid, ulong state) {");
+            sb.AppendLine("        var __xeno_word = pid >> 5;");
+            sb.AppendLine("        var __xeno_shift = (pid & 31) << 1;");
+            sb.AppendLine("        var __xeno_mask = 3ul << __xeno_shift;");
+            sb.Append("        ").Append(set.QueryPageStatesFieldName).Append("[__xeno_word] = (").Append(set.QueryPageStatesFieldName).AppendLine("[__xeno_word] & ~__xeno_mask) | (state << __xeno_shift);");
             sb.AppendLine("    }");
             sb.AppendLine();
 
@@ -898,10 +836,9 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             sb.Append("        ").Append(set.QueryPageCountsFieldName).AppendLine("[pid] = newCount;");
             sb.Append("        ").Append(set.QueryCountFieldName).AppendLine("++;");
             sb.AppendLine("        if (oldCount == 0) {");
-            sb.Append("            __xeno_AddPartialPage_").Append(suffix).AppendLine("(pid);");
+            sb.Append("            __xeno_SetQueryPageState_").Append(suffix).AppendLine("(pid, 1ul);");
             sb.AppendLine("        } else if (newCount == __xeno_pageCap) {");
-            sb.Append("            __xeno_RemovePartialPage_").Append(suffix).AppendLine("(pid);");
-            sb.Append("            __xeno_AddFullPage_").Append(suffix).AppendLine("(pid);");
+            sb.Append("            __xeno_SetQueryPageState_").Append(suffix).AppendLine("(pid, 3ul);");
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -919,12 +856,13 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             sb.Append("        ").Append(set.QueryPageCountsFieldName).AppendLine("[pid] = newCount;");
             sb.Append("        ").Append(set.QueryCountFieldName).AppendLine("--;");
             sb.AppendLine("        if (oldCount == __xeno_pageCap) {");
-            sb.Append("            __xeno_RemoveFullPage_").Append(suffix).AppendLine("(pid);");
             sb.AppendLine("            if (newCount != 0) {");
-            sb.Append("                __xeno_AddPartialPage_").Append(suffix).AppendLine("(pid);");
+            sb.Append("                __xeno_SetQueryPageState_").Append(suffix).AppendLine("(pid, 1ul);");
+            sb.AppendLine("            } else {");
+            sb.Append("                __xeno_SetQueryPageState_").Append(suffix).AppendLine("(pid, 0ul);");
             sb.AppendLine("            }");
             sb.AppendLine("        } else if (newCount == 0) {");
-            sb.Append("            __xeno_RemovePartialPage_").Append(suffix).AppendLine("(pid);");
+            sb.Append("            __xeno_SetQueryPageState_").Append(suffix).AppendLine("(pid, 0ul);");
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -1585,7 +1523,11 @@ public sealed class WorldSourceGenerator : ISourceGenerator
                 sb.AppendLine("        int __xeno_pid = 0;");
             sb.AppendLine("        int __xeno_slot = 0;");
             if (usesMaterializedLoop)
+            {
                 sb.AppendLine("        ulong __xeno_slots = 0;");
+                sb.AppendLine("        ulong __xeno_pageStates = 0;");
+                sb.AppendLine("        ulong __xeno_pageState = 0;");
+            }
             if (usesChunkLoop)
             {
                 sb.AppendLine("        var __xeno_chunkCount = 0;");
@@ -1726,55 +1668,80 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         INamedTypeSymbol entityType,
         INamedTypeSymbol uniformAttributeType)
     {
+        void EmitPageReferences(string indent)
+        {
+            foreach (var component in componentInfos.Where(c => c.Inline && FixedBufferTypeName(c.Type) == null))
+            {
+                sb.Append(indent).Append("ref var ").Append(ComponentPageFieldName(component))
+                    .Append(" = ref __xeno_page.")
+                    .Append(component.PagesFieldName)
+                    .AppendLine(".__xeno_00;");
+            }
+            foreach (var component in componentInfos.Where(c => !c.Inline))
+            {
+                sb.Append(indent).Append(ComponentPageFieldName(component))
+                    .Append(" = __xeno_page.")
+                    .Append(component.PagesFieldName)
+                    .AppendLine(";");
+            }
+        }
+
+        void EmitFullPageLoop(string indent)
+        {
+            sb.Append(indent).AppendLine("for (__xeno_slot = 0; __xeno_slot < __xeno_pageCap; __xeno_slot++) {");
+            if (hasEntityParameter)
+                sb.Append(indent).AppendLine("    __xeno_eid = (__xeno_pid << __xeno_pageShift) | __xeno_slot;");
+            foreach (var call in calls)
+                AppendInvocation(sb, indent + "    ", call, componentInfos.ToList(), entityType, uniformAttributeType);
+            sb.Append(indent).AppendLine("}");
+        }
+
+        void EmitPartialPageLoop(string indent)
+        {
+            sb.Append(indent).AppendLine("__xeno_slot = 0;");
+            sb.Append(indent).AppendLine("while (__xeno_slots != 0) {");
+            sb.Append(indent).AppendLine("    while ((__xeno_slots & 1ul) == 0) {");
+            sb.Append(indent).AppendLine("        __xeno_slot++;");
+            sb.Append(indent).AppendLine("        __xeno_slots >>= 1;");
+            sb.Append(indent).AppendLine("    }");
+            sb.Append(indent).AppendLine("    do {");
+            if (hasEntityParameter)
+                sb.Append(indent).AppendLine("        __xeno_eid = (__xeno_pid << __xeno_pageShift) | __xeno_slot;");
+            foreach (var call in calls)
+                AppendInvocation(sb, indent + "        ", call, componentInfos.ToList(), entityType, uniformAttributeType);
+            sb.Append(indent).AppendLine("        __xeno_slot++;");
+            sb.Append(indent).AppendLine("        __xeno_slots >>= 1;");
+            sb.Append(indent).AppendLine("    } while ((__xeno_slots & 1ul) != 0);");
+            sb.Append(indent).AppendLine("}");
+        }
+
         if (hasEntityParameter)
             sb.AppendLine("        __xeno_entities = entities;");
+
         sb.Append("        __xeno_count = ").Append(set.QueryCountFieldName).AppendLine(";");
         sb.AppendLine("        if (__xeno_count != 0) {");
+        sb.Append("            ref var __xeno_pageStatesRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(").Append(set.QueryPageStatesFieldName).AppendLine(");");
         sb.Append("            ref var __xeno_querySlotsRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(").Append(set.QuerySlotsFieldName).AppendLine(");");
         sb.AppendLine("            ref var __xeno_pagesRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages);");
-        sb.Append("            __xeno_count = ").Append(set.QuerySlotsFieldName).AppendLine(".Length;");
+        sb.Append("            __xeno_count = ").Append(set.QueryPageStatesFieldName).AppendLine(".Length;");
         sb.AppendLine("            for (__xeno_i = 0; __xeno_i < __xeno_count; __xeno_i++) {");
-        sb.AppendLine("                __xeno_slots = global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_querySlotsRef, __xeno_i);");
-        sb.AppendLine("                if (__xeno_slots == 0ul) continue;");
-        sb.AppendLine("                __xeno_pid = __xeno_i;");
-        sb.AppendLine("                ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_pagesRef, __xeno_pid);");
-        foreach (var component in componentInfos.Where(c => c.Inline && FixedBufferTypeName(c.Type) == null))
-        {
-            sb.Append("                ref var ").Append(ComponentPageFieldName(component))
-                .Append(" = ref __xeno_page.")
-                .Append(component.PagesFieldName)
-                .AppendLine(".__xeno_00;");
-        }
-        foreach (var component in componentInfos.Where(c => !c.Inline))
-        {
-            sb.Append("                ").Append(ComponentPageFieldName(component))
-                .Append(" = __xeno_page.")
-                .Append(component.PagesFieldName)
-                .AppendLine(";");
-        }
-        sb.AppendLine("                if (__xeno_slots == ulong.MaxValue) {");
-        sb.AppendLine("                    for (__xeno_slot = 0; __xeno_slot < __xeno_pageCap; __xeno_slot++) {");
-        if (hasEntityParameter)
-            sb.AppendLine("                        __xeno_eid = (__xeno_pid << __xeno_pageShift) | __xeno_slot;");
-        foreach (var call in calls)
-            AppendInvocation(sb, "                        ", call, componentInfos.ToList(), entityType, uniformAttributeType);
-        sb.AppendLine("                    }");
-        sb.AppendLine("                } else {");
-        sb.AppendLine("                    __xeno_slot = 0;");
-        sb.AppendLine("                    while (__xeno_slots != 0) {");
-        sb.AppendLine("                        while ((__xeno_slots & 1ul) == 0) {");
-        sb.AppendLine("                            __xeno_slot++;");
-        sb.AppendLine("                            __xeno_slots >>= 1;");
+        sb.AppendLine("                __xeno_pageStates = global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_pageStatesRef, __xeno_i);");
+        sb.AppendLine("                if (__xeno_pageStates == 0ul) continue;");
+        sb.AppendLine("                __xeno_pid = __xeno_i << 5;");
+        sb.AppendLine("                while (__xeno_pageStates != 0ul) {");
+        sb.AppendLine("                    __xeno_pageState = __xeno_pageStates & 3ul;");
+        sb.AppendLine("                    if (__xeno_pageState != 0ul) {");
+        sb.AppendLine("                        __xeno_slots = global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_querySlotsRef, __xeno_pid);");
+        sb.AppendLine("                        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_pagesRef, __xeno_pid);");
+        EmitPageReferences("                        ");
+        sb.AppendLine("                        if (__xeno_pageState == 3ul) {");
+        EmitFullPageLoop("                            ");
+        sb.AppendLine("                        } else {");
+        EmitPartialPageLoop("                            ");
         sb.AppendLine("                        }");
-        sb.AppendLine("                        do {");
-        if (hasEntityParameter)
-            sb.AppendLine("                            __xeno_eid = (__xeno_pid << __xeno_pageShift) | __xeno_slot;");
-        foreach (var call in calls)
-            AppendInvocation(sb, "                            ", call, componentInfos.ToList(), entityType, uniformAttributeType);
-        sb.AppendLine("                            __xeno_slot++;");
-        sb.AppendLine("                            __xeno_slots >>= 1;");
-        sb.AppendLine("                        } while ((__xeno_slots & 1ul) != 0);");
         sb.AppendLine("                    }");
+        sb.AppendLine("                    __xeno_pid++;");
+        sb.AppendLine("                    __xeno_pageStates >>= 2;");
         sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
