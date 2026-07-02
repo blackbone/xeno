@@ -7,15 +7,15 @@ namespace Xeno {
         public readonly bool floating;
         public BitSetReadOnly mask;
 
-        public uint[] entities;
-        public uint entitiesCount;
+        public int[] entities;
+        public int entitiesCount;
         public Archetype prev;
         public Archetype next;
 
         public Archetype(in bool floating, in World world) {
             this.world = world;
             this.floating = floating;
-            entities = new uint[Constants.DefaultArchetypeEntityCount];
+            entities = new int[Constants.DefaultArchetypeEntityCount];
             entitiesCount = 0;
         }
 

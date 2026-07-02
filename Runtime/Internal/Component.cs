@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // ReSharper disable StaticMemberInGenericType
@@ -16,9 +17,9 @@ namespace Xeno
     /// <typeparam name="T"></typeparam>
     internal static class CI<T>
     {
-        public static T Default = default;
         public static readonly int Index = ComponentInfo.Index++;
         public static readonly int MaskSize = BitSet.MaskSize(Index);
+        public static readonly bool IsReferenceOrContainsReferences = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
 
         public static BitSetReadOnly Mask;
         static CI() {

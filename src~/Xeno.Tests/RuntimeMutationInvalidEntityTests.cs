@@ -74,11 +74,7 @@ public class RuntimeMutationInvalidEntityTests {
     [Test]
     public void OutOfRangeEntityIsInvalidAndSafeForQueries() {
         var world = TestWorlds.Get("world");
-        var invalid = new Entity {
-            Id = uint.MaxValue,
-            Version = 1,
-            WorldId = world.Id,
-        };
+        var invalid = new Entity(int.MaxValue, 1, world.Id);
 
         Assert.That(world.IsEntityValid(invalid), Is.False);
         Assert.That(world.HasComponentA(invalid), Is.False);

@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Xeno
@@ -7,11 +6,17 @@ namespace Xeno
     /// Entity representation struct. 9 bytes only.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public partial struct Entity
+    public readonly partial struct Entity
     {
-        public uint Id;
-        public uint Version;
-        public ushort WorldId;
+        public readonly int Id;
+        public readonly uint Version;
+        public readonly ushort WorldId;
+
+        internal Entity(int id, uint version, ushort worldId) {
+            Id = id;
+            Version = version;
+            WorldId = worldId;
+        }
 
         public override string ToString() => $"[{WorldId}|{Id}({Version})]{GetArchetype()}";
 

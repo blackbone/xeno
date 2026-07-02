@@ -5,9 +5,11 @@ namespace Xeno
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class SystemMethodAttribute : Attribute
     {
-        public SystemMethodAttribute(SystemMethodType method, int order = 0) { }
+        public SystemMethodAttribute(SystemMethodType method, int order = 0, bool pure = false) {
+            Pure = pure;
+        }
 
-        public bool NoFuse { get; set; }
+        public bool Pure { get; set; }
     }
     
     public enum SystemMethodType

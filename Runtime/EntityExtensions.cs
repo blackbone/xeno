@@ -5,12 +5,12 @@ namespace Xeno
     public static class EntityExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsValid(this ref Entity entity) {
+        public static bool IsValid(this in Entity entity) {
             return Worlds.TryGet(entity.WorldId, out var world) && world.IsEntityValid(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Destroy(this ref Entity entity) {
+        public static void Destroy(this in Entity entity) {
             if (!Worlds.TryGet(entity.WorldId, out var world)) return;
             world.DestroyEntity(entity);
         }

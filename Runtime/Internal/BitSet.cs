@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -140,22 +139,6 @@ namespace Xeno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Get(this ref BitSet set, int index) {
             return (set.data[index >> Constants.LONG_DIVIDER] & 1ul << (index & Constants.LONG_DIVISION_MASK)) != 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void FinalizeIndexJoin(this ref BitSet set) {
-            var result = 0;
-            var l = set.data.Length;
-            for (var i = 0; i < l; i++) {
-                var v = set.data[i];
-
-                var k = 0;
-                while (v != 0) {
-                    if ((v & 1ul) == 1ul) result |= i * Constants.LongBitSize + k;
-                    v >>= 1;
-                    k++;
-                }
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

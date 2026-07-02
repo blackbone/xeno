@@ -168,7 +168,7 @@ public class FreeListAndBufferResizingTests {
 
         for (int i = 0; i < 100; i++) {
             var e = world.CreateEntity();
-            Assert.That(e.Id, Is.EqualTo((uint)(99 - i))); // Should be reusing IDs in reverse order
+            Assert.That(e.Id, Is.EqualTo((99 - i))); // Should be reusing IDs in reverse order
         }
     }
 

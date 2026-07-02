@@ -4,6 +4,15 @@
 >
 > (!) - means "possible subject to change"
 
+## 0.2.1
+### Changed
+- Added generated materialized query page masks for bake-query systems.
+- Inlined generated query add/remove/update paths and reused computed page ids and slot bits.
+- Reworked archetype migration around an on-demand transition graph and transition LRU cache.
+- Added opt-in inline component pages and fixed-size page array pooling.
+- Fixed bitset equality and matching to compare full masks instead of relying on hash-only checks.
+- Removed the old generic storage layer in favor of generated page storage.
+
 
 ## 0.1.6
 ### Changed

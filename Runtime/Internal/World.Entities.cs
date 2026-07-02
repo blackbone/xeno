@@ -7,10 +7,15 @@ namespace Xeno {
         private const uint AllocatedMask = 0b10000000_00000000_00000000_00000000U;
         private const uint NonAllocationMask = ~AllocatedMask;
 
-        private uint entityCount;
-        public Entity[] entities;
-        private uint freeIdsCount;
-        internal uint[] freeIds;
+        private int entityCount;
+        protected internal Entity[] entities;
+        private int freeIdsCount;
+        internal int[] freeIds;
+
+        public ReadOnlySpan<Entity> Entities {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => entities;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected bool IsEntityValid_Internal(in Entity entity) {
@@ -24,11 +29,11 @@ namespace Xeno {
             entityCount = 0;
             entities = Array.Empty<Entity>();
             freeIdsCount = 0;
-            freeIds = Array.Empty<uint>();
+            freeIds = Array.Empty<int>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void InitEmptyEntities_Internal(uint from, in uint to) {
+        private void InitEmptyEntities_Internal(int from, in int to) {
             var count = to - from + 1;
             var freeIdsLength = freeIds.Length;
 
@@ -37,11 +42,8 @@ namespace Xeno {
             Array.Resize(ref freeIds, size);
 
             // Start filling freeIds in reverse order
-            for (var i = to; i != uint.MaxValue && i >= from; i--) {
-                ref var entity = ref entities[i];
-                entity.Id = i;
-                entity.WorldId = Id;
-                entity.Version = 0;
+            for (var i = to; i >= from; i--) {
+                entities[i] = new Entity(i, 0, Id);
 
                 freeIds[freeIdsCount++] = i;
             }
@@ -55,8 +57,9 @@ namespace Xeno {
                 e_id = freeIds[freeIdsCount];
             }
 
-            entities[e_id].Version |= AllocatedMask;
-            entity = Unsafe.As<Entity, Entity>(ref entities[e_id]);
+            var stored = entities[e_id];
+            entity = new Entity(stored.Id, stored.Version | AllocatedMask, stored.WorldId);
+            entities[e_id] = entity;
             entityCount++;
         }
 
@@ -66,18 +69,18 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteEntity_Internal(in uint entityId) {
+        private void DeleteEntity_Internal(in int entityId) {
             ref var e = ref entities[entityId];
-            e.Version &= NonAllocationMask;
-            e.Version++;
+            var id = e.Id;
+            e = new Entity(id, (e.Version & NonAllocationMask) + 1, e.WorldId);
             entityCount--;
 
-            if (freeIdsCount == freeIds.Length) Array.Resize(ref freeIds, (int)(freeIdsCount << 1));
-            freeIds[freeIdsCount++] = e.Id;
+            if (freeIdsCount == freeIds.Length) Array.Resize(ref freeIds, freeIdsCount << 1);
+            freeIds[freeIdsCount++] = id;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureFreeIdsCapacity_Internal(in uint capacity) {
+        private void EnsureFreeIdsCapacity_Internal(in int capacity) {
             if (capacity <= freeIds.Length) return;
 
             var size = freeIds.Length == 0 ? 1 : freeIds.Length;

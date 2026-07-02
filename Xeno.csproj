@@ -9,7 +9,7 @@
         <AssemblyName>Xeno</AssemblyName>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.2.0</PackageVersion>
+        <PackageVersion>0.2.1</PackageVersion>
         <Title>General purpose ECS</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides bare bones ECS to get basic stuff.</Description>
@@ -23,9 +23,11 @@
         <RepositoryUrl>https://github.com/blackbone/xeno</RepositoryUrl>
         <RepositoryType>github</RepositoryType>
         <PackageReleaseNotes>Changed:
-&gt; generate typed worlds without component interfaces
-&gt; harden runtime storage and mutation validation
-&gt; add bulk entity deletion and bitset/archetype optimizations
+&gt; materialize generated query page masks for bake-query systems
+&gt; inline generated query add/remove/update hot paths
+&gt; use archetype transition graph and transition LRU cache
+&gt; add opt-in inline component pages and page array pooling
+&gt; remove old generic storage layer
         </PackageReleaseNotes>
     </PropertyGroup>
 

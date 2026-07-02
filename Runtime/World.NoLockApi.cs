@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace Xeno {
     public abstract partial class World {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Entity CreateEntity_NoLock() {
+        protected Entity CreateEntity_NoLock() {
             if (entityCount == entities.Length)
                 GrowCapacity_Internal(entityCount << 1);
 
@@ -20,7 +20,7 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DestroyEntity_NoLock(in Entity entity) {
+        protected void DestroyEntity_NoLock(in Entity entity) {
             if (!IsEntityValid_Internal(entity))
                 return;
 
@@ -28,8 +28,8 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DestroyEntities_NoLock(ReadOnlySpan<Entity> entities) {
-            EnsureFreeIdsCapacity_Internal(freeIdsCount + (uint)entities.Length);
+        protected void DestroyEntities_NoLock(ReadOnlySpan<Entity> entities) {
+            EnsureFreeIdsCapacity_Internal(freeIdsCount + entities.Length);
             for (var i = 0; i < entities.Length; i++) {
                 var entity = entities[i];
                 if (!IsEntityValid_Internal(entity))

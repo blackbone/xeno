@@ -10,15 +10,16 @@ Xenomorp ECS is just another ECS for C# and unity utilizing some experimental an
 * a lot of unsafe code
 * direct memory manipulations and types blitting
 
-## Release 0.2.0 Highlights
+## Release 0.2.1 Highlights
 
-Version `0.2.0` consolidates the changes since `0.1.9` into one release focused on generated
-worlds, stricter runtime safety, and lower-level hot-path optimization:
+Version `0.2.1` focuses on generated-world hot paths, query iteration, and storage cleanup:
 
-* Generate typed worlds from partial `World` declarations without requiring component interfaces.
-* Harden runtime mutation and storage checks to fail earlier on invalid or stale entity access.
-* Add bulk entity deletion and optimize bitset, archetype, and page/store operations.
-* Cover the generator/runtime contract with regression tests and CI validation.
+* Add materialized generated query page masks for bake-query systems.
+* Inline generated query add/remove/update paths and reuse computed page ids and slot bits.
+* Replace archetype lookup variants with an on-demand transition graph and LRU transition cache.
+* Add opt-in inline component pages and fixed-size page array pooling.
+* Fix full bitset equality/matching semantics and remove hash-only matching from archetype lookup.
+* Remove the old generic storage layer and keep generated worlds on direct page storage.
 
 # Repository Layout
 
@@ -46,7 +47,7 @@ GitHub Actions runs the same validation on pushes to `main` and pull requests.
 # Package Metadata
 
 Unity package metadata lives in `package.json`. NuGet package metadata lives in `Xeno.csproj` and
-`src~/Xeno.SourceGenerator/Xeno.SourceGenerator.csproj`. Version `0.2.0` is the current release and
+`src~/Xeno.SourceGenerator/Xeno.SourceGenerator.csproj`. Version `0.2.1` is the current release and
 all three package versions should stay aligned before cutting the next one.
 
 # Generated Worlds

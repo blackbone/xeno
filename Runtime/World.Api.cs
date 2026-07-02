@@ -6,13 +6,20 @@ namespace Xeno {
         public readonly string Name;
         public readonly ushort Id;
 
-        public uint EntityCount {
+        public int EntityCount {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => entityCount;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => Worlds.Remove(this);
+        public void Dispose() {
+            DisposeGeneratedData_Internal();
+            Worlds.Remove(this);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected virtual void DisposeGeneratedData_Internal() {
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Entity CreateEntity() {
@@ -39,7 +46,7 @@ namespace Xeno {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DestroyValidEntity_Internal(in uint entityId) {
+        private void DestroyValidEntity_Internal(in int entityId) {
             var archetype = entityArchetypes[entityId];
             if (archetype.mask.indices.Length != 0)
                 ClearGeneratedEntityData(entityId, archetype.mask);
@@ -52,7 +59,7 @@ namespace Xeno {
         public bool IsEntityValid(in Entity entity) => IsEntityValid_Internal(entity);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected static uint EntityId(in Entity entity) => entity.Id;
+        protected static int EntityId(in Entity entity) => entity.Id;
 
         public override string ToString() => $"{Name} ({Id})";
 
@@ -77,7 +84,7 @@ namespace Xeno {
 
         public void EnsureCapacity(int capacity) {
             if (capacity < 0) throw new ArgumentOutOfRangeException(nameof(capacity));
-            GrowCapacity_Internal((uint)capacity);
+            GrowCapacity_Internal(capacity);
         }
     }
 }

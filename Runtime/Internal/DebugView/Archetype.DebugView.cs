@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 namespace Xeno {
     [DebuggerTypeProxy(typeof(Archetype_DebugView))]
@@ -15,7 +14,7 @@ namespace Xeno {
             }
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
-            public uint EntitiesCount => _archetype.entitiesCount;
+            public int EntitiesCount => _archetype.entitiesCount;
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
             public Entity[] Entities {
@@ -30,15 +29,6 @@ namespace Xeno {
 
             [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
             public string Mask => _archetype.mask.ToString();
-
-            [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
-            public List<Store3> Stores {
-                get {
-                    var result = new List<Store3>();
-                    result.AddRange(_archetype.mask.GetIndices().Select(i => _world.stores2[i]));
-                    return result;
-                }
-            }
         }
     }
 }

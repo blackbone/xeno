@@ -15,7 +15,7 @@
         <PackageId>Xeno.SourceGenerator</PackageId>
 
         <!-- PACKAGE PROPERTIES -->
-        <PackageVersion>0.2.0</PackageVersion>
+        <PackageVersion>0.2.1</PackageVersion>
         <Title>General purpose ECS Source Generator</Title>
         <Authors>Blackbone</Authors>
         <Description>Provides source generator for XENO ECS to get basic stuff.</Description>

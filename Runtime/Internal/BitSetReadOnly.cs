@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -40,11 +39,37 @@ namespace Xeno {
             indices = buffer[..count].ToArray();
         }
 
-        public bool Equals(BitSetReadOnly other) => max == other.max && hash == other.hash;
-        public bool Equals(BitSet other) => max == other.max && hash == other.hash;
+        public bool Equals(BitSetReadOnly other) => max == other.max && hash == other.hash && DataEquals(data, other.data, max);
+        public bool Equals(BitSet other) => max == other.max && hash == other.hash && DataEquals(data, other.data, max);
         public override bool Equals(object obj) => obj is BitSetReadOnly other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(max, hash);
         public override string ToString() => $"{BitSetExtensions.ToS(data)}";
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool DataEquals(ulong[] left, ulong[] right, int max) {
+            var words = BitSet.MaskSize(max);
+            for (var i = 0; i < words; i++) {
+                var leftWord = i < left.Length ? left[i] : 0ul;
+                var rightWord = i < right.Length ? right[i] : 0ul;
+                if (leftWord != rightWord)
+                    return false;
+            }
+
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool DataEquals(ulong[] left, ReadOnlySpan<ulong> right, int max) {
+            var words = BitSet.MaskSize(max);
+            for (var i = 0; i < words; i++) {
+                var leftWord = i < left.Length ? left[i] : 0ul;
+                var rightWord = i < right.Length ? right[i] : 0ul;
+                if (leftWord != rightWord)
+                    return false;
+            }
+
+            return true;
+        }
     }
 
     internal static class BitSetReadOnlyExtensions {
@@ -55,12 +80,14 @@ namespace Xeno {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool Cross(this ref BitSetReadOnly set, ref BitSetReadOnly other) {
-            if (set.hash == other.hash) return true;
-            if (other.data.Length > set.data.Length) return false;
+            var max = set.max < other.max ? set.max : other.max;
+            var length = BitSet.MaskSize(max);
 
-            for (var i = 0; i < other.data.Length; i++)
+            for (var i = 0; i < length; i++)
             {
-                if ((set.data[i] & other.data[i]) != 0)
+                var setWord = i < set.data.Length ? set.data[i] : 0ul;
+                var otherWord = i < other.data.Length ? other.data[i] : 0ul;
+                if ((setWord & otherWord) != 0)
                     return true;
             }
 
@@ -69,12 +96,14 @@ namespace Xeno {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool Includes(this ref BitSetReadOnly set, ref BitSetReadOnly other) {
-            if (set.hash == other.hash) return true;
-            if (other.data.Length > set.data.Length) return false;
+            if (other.max > set.max) return false;
 
-            for (var i = 0; i < other.data.Length; i++)
+            var length = BitSet.MaskSize(other.max);
+            for (var i = 0; i < length; i++)
             {
-                if ((set.data[i] & other.data[i]) != other.data[i])
+                var setWord = i < set.data.Length ? set.data[i] : 0ul;
+                var otherWord = i < other.data.Length ? other.data[i] : 0ul;
+                if ((setWord & otherWord) != otherWord)
                     return false;
             }
 
@@ -97,15 +126,15 @@ namespace Xeno {
         internal static string ToS(this ref BitSetReadOnly bitSet) => ToS(bitSet.data);
 
         internal static string ToS(this ulong[] data) {
-            var _sb = new StringBuilder();
-            _sb.Clear();
+            var sb = new StringBuilder();
+            sb.Clear();
 
             foreach (var v in data) {
-                _sb.Insert(0, $".{v:b64}");
+                sb.Insert(0, $".{v:b64}");
             }
-            _sb.Remove(0, 1);
+            sb.Remove(0, 1);
 
-            return $"[{_sb}]";
+            return $"[{sb}]";
         }
     }
 }

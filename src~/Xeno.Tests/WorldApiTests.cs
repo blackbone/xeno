@@ -130,4 +130,30 @@ public class WorldEntityCreationTests {
         Assert.That(!e.IsValid());
         Assert.That(world.EntityCount, Is.Zero);
     }
+
+    [Test]
+    public void CountQueriesReflectArchetypeChangesAfterCaching() {
+        var world = TestWorlds.Get("world");
+
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+
+        var a = world.CreateEntity(new Component1 { Value = 1 });
+        var b = world.CreateEntity(new Component2 { Value = 2 });
+
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1(), Is.EqualTo(1));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+
+        world.Add(b, new Component1 { Value = 3 });
+
+        Assert.That(world.CountComponent1(), Is.EqualTo(2));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(1));
+
+        world.RemoveComponent1(a);
+        world.RemoveComponent1(b);
+
+        Assert.That(world.CountComponent1(), Is.EqualTo(0));
+        Assert.That(world.CountComponent1AndComponent2(), Is.EqualTo(0));
+    }
 }

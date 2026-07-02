@@ -60,6 +60,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         public string FieldName;
         public IMethodSymbol Constructor;
         public readonly List<SystemCall> Calls = new();
+        public bool BakeQuery;
     }
 
     private sealed class SystemCall
@@ -69,7 +70,8 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         public SystemMethodType Type;
         public int Order;
         public int Index;
-        public bool NoFuse;
+        public bool Pure;
+        public bool BakeQuery;
         public ImmutableArray<IParameterSymbol> ComponentParameters;
     }
 
@@ -80,12 +82,25 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         public string ApiName;
         public string HelperName;
         public string PagesFieldName;
+        public string PoolFieldName;
+        public string PoolCountFieldName;
+        public string InlinePageName;
+        public bool Inline;
     }
 
     private sealed class ComponentSetInfo
     {
         public ComponentInfo[] Components;
         public string MaskFieldName;
+        public string ArchetypeCacheFieldName;
+        public string AddSourceCacheFieldName;
+        public string AddTargetCacheFieldName;
+        public string RemoveSourceCacheFieldName;
+        public string RemoveTargetCacheFieldName;
+        public string QueryActivePagesFieldName;
+        public string QueryCountFieldName;
+        public bool MaterializedQuery;
+        public int TransitionKey;
     }
 
     private sealed class RequestedApiMethod
@@ -420,6 +435,10 @@ public sealed class WorldSourceGenerator : ISourceGenerator
                 Order = attribute.ConstructorArguments.Length > 1 && attribute.ConstructorArguments[1].Value is int order ? order : 0,
                 Index = systems.Count,
                 FieldName = $"__xeno_system_{systems.Count:X2}",
+                BakeQuery = TryGetNamedBool(attribute, "BakeQuery")
+                            || (attribute.ConstructorArguments.Length > 2
+                                && attribute.ConstructorArguments[2].Value is bool positionalBakeQuery
+                                && positionalBakeQuery),
             };
 
             system.Constructor = SelectConstructor(systemType);
@@ -430,7 +449,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             foreach (var method in systemType.GetMembers().OfType<IMethodSymbol>())
             {
-                if (!TryGetSystemMethod(method, systemMethodAttributeType, out var type, out var methodOrder, out var noFuse))
+                if (!TryGetSystemMethod(method, systemMethodAttributeType, out var type, out var methodOrder, out var pure))
                     continue;
 
                 var call = new SystemCall {
@@ -439,7 +458,8 @@ public sealed class WorldSourceGenerator : ISourceGenerator
                     Type = type,
                     Order = methodOrder,
                     Index = system.Calls.Count,
-                    NoFuse = noFuse,
+                    Pure = pure,
+                    BakeQuery = system.BakeQuery,
                     ComponentParameters = method.Parameters.Where(p => IsComponentParameter(p, entityType, uniformAttributeType)).ToImmutableArray(),
                 };
 
@@ -472,22 +492,34 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         IEnumerable<RequestedApiMethod> requestedApiMethods)
     {
         var components = new List<ComponentInfo>();
-        var seen = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var seen = new Dictionary<INamedTypeSymbol, ComponentInfo>(SymbolEqualityComparer.Default);
 
-        void Add(INamedTypeSymbol type)
+        void Add(INamedTypeSymbol type, bool inline = false)
         {
-            if (type == null || !seen.Add(type))
+            if (type == null)
                 return;
+
+            if (seen.TryGetValue(type, out var existing))
+            {
+                existing.Inline |= inline;
+                return;
+            }
 
             var index = components.Count;
             var apiName = BuildApiName(type);
-            components.Add(new ComponentInfo {
+            var component = new ComponentInfo {
                 Type = type,
                 Index = index,
                 ApiName = apiName,
                 HelperName = $"__xeno_{apiName}",
                 PagesFieldName = $"__xeno_pages_{index:X2}",
-            });
+                PoolFieldName = $"__xeno_pool_{index:X2}",
+                PoolCountFieldName = $"__xeno_pool_{index:X2}_count",
+                InlinePageName = $"__xeno_page_{index:X2}",
+                Inline = inline,
+            };
+            components.Add(component);
+            seen.Add(type, component);
         }
 
         foreach (var attribute in worldAttributes)
@@ -495,7 +527,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             if (!SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, registerComponentAttributeType))
                 continue;
             if (attribute.ConstructorArguments.Length > 0)
-                Add(attribute.ConstructorArguments[0].Value as INamedTypeSymbol);
+                Add(attribute.ConstructorArguments[0].Value as INamedTypeSymbol, TryGetNamedBool(attribute, "Inline"));
         }
 
         foreach (var parameter in systems.SelectMany(s => s.Calls).SelectMany(c => c.ComponentParameters))
@@ -511,6 +543,16 @@ public sealed class WorldSourceGenerator : ISourceGenerator
     {
         var sets = new List<ComponentSetInfo>();
         var seen = new HashSet<string>();
+        var materialized = new HashSet<string>();
+
+        foreach (var call in systems.SelectMany(s => s.Calls).Where(c => c.BakeQuery && c.ComponentParameters.Length > 0))
+        {
+            var set = call.ComponentParameters
+                .Select(p => components.First(c => SymbolEqualityComparer.Default.Equals(c.Type, p.Type)))
+                .OrderBy(c => c.Index)
+                .ToArray();
+            materialized.Add(string.Join(",", set.Select(c => c.Index)));
+        }
 
         void Add(IEnumerable<ComponentInfo> source)
         {
@@ -522,9 +564,19 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             if (!seen.Add(key))
                 return;
 
+            var name = string.Join("_", set.Select(c => c.ApiName));
             sets.Add(new ComponentSetInfo {
                 Components = set,
-                MaskFieldName = $"__xeno_mask_{string.Join("_", set.Select(c => c.ApiName))}",
+                MaskFieldName = $"__xeno_mask_{name}",
+                ArchetypeCacheFieldName = $"__xeno_archetype_{name}",
+                AddSourceCacheFieldName = $"__xeno_add_source_{name}",
+                AddTargetCacheFieldName = $"__xeno_add_target_{name}",
+                RemoveSourceCacheFieldName = $"__xeno_remove_source_{name}",
+                RemoveTargetCacheFieldName = $"__xeno_remove_target_{name}",
+                QueryActivePagesFieldName = $"__xeno_query_{name}_activePages",
+                QueryCountFieldName = $"__xeno_query_{name}_count",
+                MaterializedQuery = materialized.Contains(key),
+                TransitionKey = sets.Count + 1,
             });
         }
 
@@ -586,10 +638,11 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         sb.AppendLine("    private const int __xeno_pageShift = 6;");
         sb.AppendLine("    private const int __xeno_pageMask = (1 << __xeno_pageShift) - 1;");
         sb.AppendLine("    private const int __xeno_pageCap = __xeno_pageMask + 1;");
-        sb.AppendLine("    private uint[][] __xeno_chunks;");
+        sb.AppendLine("    private int[][] __xeno_chunks;");
         sb.AppendLine("    private int[] __xeno_counts;");
-        sb.AppendLine("    private uint[] __xeno_buf;");
+        sb.AppendLine("    private int[] __xeno_buf;");
         sb.AppendLine("    private global::Xeno.Entity[] __xeno_entities;");
+        sb.AppendLine("    private __XenoPage[] __xeno_pages;");
         sb.AppendLine("    private int __xeno_chunkCount;");
         sb.AppendLine("    private int __xeno_chunk;");
         sb.AppendLine("    private int __xeno_i;");
@@ -597,18 +650,40 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         sb.AppendLine("    private float __xeno_delta;");
         sb.AppendLine();
 
+        sb.AppendLine("    private struct __XenoPage {");
         foreach (var component in components)
+            sb.Append("        public ").Append(PageStorageTypeName(component)).Append(' ').Append(component.PagesFieldName).AppendLine(";");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        foreach (var component in components.Where(c => !c.Inline))
         {
             var typeName = TypeName(component.Type);
-            sb.Append("    private ").Append(typeName).Append("[][] ").Append(component.PagesFieldName).AppendLine(";");
-            sb.Append("    private ").Append(typeName).Append("[] ").Append(ComponentPageFieldName(component)).AppendLine(";");
+            sb.Append("    private static ").Append(typeName).Append("[][] ").Append(component.PoolFieldName).AppendLine(";");
+            sb.Append("    private static int ").Append(component.PoolCountFieldName).AppendLine(";");
         }
+
+        if (components.Count > 0)
+            sb.AppendLine();
+
+        foreach (var component in components.Where(c => !c.Inline))
+            sb.Append("    private ").Append(TypeName(component.Type)).Append("[] ").Append(ComponentPageFieldName(component)).AppendLine(";");
 
         foreach (var set in componentSets)
         {
             sb.Append("    private static readonly global::Xeno.BitSetReadOnly ").Append(set.MaskFieldName).Append(" = CreateGeneratedMask(")
                 .Append(string.Join(", ", set.Components.Select(c => $"{c.HelperName}.Index")))
                 .AppendLine(");");
+            sb.Append("    private object ").Append(set.ArchetypeCacheFieldName).AppendLine(";");
+            sb.Append("    private object ").Append(set.AddSourceCacheFieldName).AppendLine(";");
+            sb.Append("    private object ").Append(set.AddTargetCacheFieldName).AppendLine(";");
+            sb.Append("    private object ").Append(set.RemoveSourceCacheFieldName).AppendLine(";");
+            sb.Append("    private object ").Append(set.RemoveTargetCacheFieldName).AppendLine(";");
+            if (set.MaterializedQuery)
+            {
+                sb.Append("    private ulong[] ").Append(set.QueryActivePagesFieldName).AppendLine(";");
+                sb.Append("    private int ").Append(set.QueryCountFieldName).AppendLine(";");
+            }
         }
 
         if (components.Count > 0)
@@ -652,11 +727,17 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             sb.Append("        ").Append(system.FieldName).Append(" = new ").Append(TypeName(system.Type)).Append('(').Append(args).AppendLine(");");
         }
 
-        foreach (var component in components)
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    protected override void GrowGeneratedCapacity_Internal(int capacity) {");
+        sb.AppendLine("        var __xeno_pageCount = (capacity + __xeno_pageMask) >> __xeno_pageShift;");
+        sb.AppendLine("        if (__xeno_pages == null || __xeno_pages.Length < __xeno_pageCount)");
+        sb.AppendLine("            global::System.Array.Resize(ref __xeno_pages, __xeno_pageCount);");
+        foreach (var set in componentSets.Where(s => s.MaterializedQuery))
         {
-            sb.Append("        ").Append(component.PagesFieldName).Append(" = new ").Append(TypeName(component.Type)).AppendLine("[32][];");
+            sb.Append("        if (").Append(set.QueryActivePagesFieldName).Append(" == null || ").Append(set.QueryActivePagesFieldName).AppendLine(".Length < __xeno_pageCount)");
+            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryActivePagesFieldName).AppendLine(", __xeno_pageCount);");
         }
-
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -678,38 +759,10 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        sb.AppendLine("    private static void __xeno_WritePage<T>(ref T[][] pages, uint entityId, T component) {");
-        sb.AppendLine("        var pid = entityId >> __xeno_pageShift;");
-        sb.AppendLine("        if (pid >= pages.Length) global::System.Array.Resize(ref pages, (int)pid + 1);");
-        sb.AppendLine("        pages[pid] ??= new T[__xeno_pageCap];");
-        sb.AppendLine("        pages[pid][entityId & __xeno_pageMask] = component;");
-        sb.AppendLine("    }");
-        sb.AppendLine();
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        sb.AppendLine("    private static bool __xeno_TryCopyPage<T>(T[][] pages, uint entityId, ref T component) {");
-        sb.AppendLine("        var pid = entityId >> __xeno_pageShift;");
-        sb.AppendLine("        if (pid >= pages.Length) return false;");
-        sb.AppendLine("        var page = pages[pid];");
+        sb.AppendLine("    private static bool __xeno_TryCopyPage<T>(T[] page, int slot, ref T component) {");
         sb.AppendLine("        if (page == null) return false;");
-        sb.AppendLine("        component = page[entityId & __xeno_pageMask];");
+        sb.AppendLine("        component = page[slot];");
         sb.AppendLine("        return true;");
-        sb.AppendLine("    }");
-        sb.AppendLine();
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        sb.AppendLine("    private static void __xeno_ClearPage<T>(T[][] pages, uint entityId) {");
-        sb.AppendLine("        var pid = entityId >> __xeno_pageShift;");
-        sb.AppendLine("        if (pid >= pages.Length) return;");
-        sb.AppendLine("        var page = pages[pid];");
-        sb.AppendLine("        if (page == null) return;");
-        sb.AppendLine("        page[entityId & __xeno_pageMask] = default;");
-        sb.AppendLine("    }");
-        sb.AppendLine();
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        sb.AppendLine("    private static void __xeno_ClearPageAt<T>(T[][] pages, uint pid, uint slot) {");
-        sb.AppendLine("        if (pid >= pages.Length) return;");
-        sb.AppendLine("        var page = pages[pid];");
-        sb.AppendLine("        if (page == null) return;");
-        sb.AppendLine("        page[slot] = default;");
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
@@ -721,10 +774,228 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         sb.AppendLine("    }");
         sb.AppendLine();
 
+        AppendGeneratedPagePoolMethods(sb, components);
+        AppendGeneratedQueryMethods(sb, componentSets);
         AppendGeneratedComponentHelpers(sb, worldSymbol, components);
-        AppendGeneratedSingleComponentMethods(sb, components, singleMasks);
+        AppendGeneratedSingleComponentMethods(sb, components, componentSets, singleMasks);
         AppendRequestedApiMethods(sb, requestedApiMethods, components, componentSets);
-        AppendGeneratedCleanupOverride(sb, components, singleMasks);
+        AppendGeneratedCleanupOverride(sb, components, componentSets, singleMasks);
+    }
+
+    private static void AppendGeneratedQueryMethods(StringBuilder sb, List<ComponentSetInfo> componentSets)
+    {
+        var sets = componentSets.Where(s => s.MaterializedQuery).ToArray();
+        if (sets.Length == 0)
+            return;
+
+        foreach (var set in sets)
+        {
+            var suffix = QuerySuffix(set);
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private void __xeno_AddQuery_").Append(suffix).AppendLine("(int pid, ulong bit) {");
+            sb.Append("        if (").Append(set.QueryActivePagesFieldName).Append(" == null || pid >= ").Append(set.QueryActivePagesFieldName).AppendLine(".Length)");
+            sb.Append("            global::System.Array.Resize(ref ").Append(set.QueryActivePagesFieldName).AppendLine(", pid + 1);");
+            sb.Append("        var oldSlots = ").Append(set.QueryActivePagesFieldName).AppendLine("[pid];");
+            sb.AppendLine("        if ((oldSlots & bit) != 0) return;");
+            sb.Append("        ").Append(set.QueryActivePagesFieldName).AppendLine("[pid] = oldSlots | bit;");
+            sb.Append("        ").Append(set.QueryCountFieldName).AppendLine("++;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private void __xeno_RemoveQuery_").Append(suffix).AppendLine("(int pid, ulong bit) {");
+            sb.Append("        if (").Append(set.QueryActivePagesFieldName).Append(" == null || pid >= ").Append(set.QueryActivePagesFieldName).AppendLine(".Length) return;");
+            sb.Append("        var oldSlots = ").Append(set.QueryActivePagesFieldName).AppendLine("[pid];");
+            sb.AppendLine("        if ((oldSlots & bit) == 0) return;");
+            sb.Append("        ").Append(set.QueryActivePagesFieldName).AppendLine("[pid] = oldSlots & ~bit;");
+            sb.Append("        ").Append(set.QueryCountFieldName).AppendLine("--;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        sb.AppendLine("    private void __xeno_RemoveGeneratedQueries(int pid, ulong bit) {");
+        foreach (var set in sets)
+        {
+            sb.Append("        __xeno_RemoveQuery_").Append(QuerySuffix(set)).AppendLine("(pid, bit);");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        sb.AppendLine("    private void __xeno_UpdateGeneratedQueries(int pid, ulong bit, in global::Xeno.BitSetReadOnly newMask) {");
+        foreach (var set in sets)
+        {
+            var suffix = QuerySuffix(set);
+            sb.Append("        var new_").Append(suffix).Append(" = GeneratedMaskIncludes(in newMask, in ").Append(set.MaskFieldName).AppendLine(");");
+            sb.Append("        if (new_").Append(suffix).Append(") __xeno_AddQuery_").Append(suffix).Append("(pid, bit); else __xeno_RemoveQuery_").Append(suffix).AppendLine("(pid, bit);");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void AppendKnownGeneratedQueryAdds(StringBuilder sb, List<ComponentSetInfo> componentSets, ComponentSetInfo knownSet, string pidExpression, string bitExpression)
+    {
+        foreach (var querySet in componentSets.Where(s => s.MaterializedQuery && IsSubset(s.Components, knownSet.Components)))
+            sb.Append("        __xeno_AddQuery_").Append(QuerySuffix(querySet)).Append("(").Append(pidExpression).Append(", ").Append(bitExpression).AppendLine(");");
+    }
+
+    private static bool HasKnownGeneratedQueryAdds(List<ComponentSetInfo> componentSets, ComponentSetInfo knownSet)
+    {
+        return componentSets.Any(s => s.MaterializedQuery && IsSubset(s.Components, knownSet.Components));
+    }
+
+    private static bool IsSubset(ComponentInfo[] subset, ComponentInfo[] set)
+    {
+        var setIndex = 0;
+        for (var subsetIndex = 0; subsetIndex < subset.Length; subsetIndex++)
+        {
+            var component = subset[subsetIndex];
+            while (setIndex < set.Length && set[setIndex].Index < component.Index)
+                setIndex++;
+            if (setIndex == set.Length || set[setIndex] != component)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static void AppendGeneratedPagePoolMethods(StringBuilder sb, List<ComponentInfo> components)
+    {
+        foreach (var component in components)
+        {
+            var typeName = TypeName(component.Type);
+            var suffix = component.Index.ToString("X2");
+
+            if (component.Inline)
+            {
+                AppendGeneratedInlinePageMethods(sb, component, typeName, suffix);
+                continue;
+            }
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static ").Append(typeName).Append("[] __xeno_RentPage_").Append(suffix).AppendLine("() {");
+            sb.Append("        if (").Append(component.PoolCountFieldName).AppendLine(" != 0) {");
+            sb.Append("            var index = --").Append(component.PoolCountFieldName).AppendLine(";");
+            sb.Append("            var page = ").Append(component.PoolFieldName).AppendLine("[index];");
+            sb.Append("            ").Append(component.PoolFieldName).AppendLine("[index] = null;");
+            sb.AppendLine("            return page;");
+            sb.AppendLine("        }");
+            sb.Append("        return new ").Append(typeName).AppendLine("[__xeno_pageCap];");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static void __xeno_ReturnPage_").Append(suffix).Append("(").Append(typeName).AppendLine("[] page) {");
+            sb.AppendLine("        if (page == null || page.Length != __xeno_pageCap) return;");
+            sb.Append("        if (").Append(component.HelperName).AppendLine(".IsReferenceOrContainsReferences)");
+            sb.AppendLine("            global::System.Array.Clear(page, 0, page.Length);");
+            sb.Append("        if (").Append(component.PoolFieldName).AppendLine(" == null)");
+            sb.Append("            ").Append(component.PoolFieldName).Append(" = new ").Append(typeName).AppendLine("[4][];");
+            sb.Append("        else if (").Append(component.PoolCountFieldName).Append(" == ").Append(component.PoolFieldName).AppendLine(".Length)");
+            sb.Append("            global::System.Array.Resize(ref ").Append(component.PoolFieldName).Append(", ").Append(component.PoolFieldName).AppendLine(".Length << 1);");
+            sb.Append(component.PoolFieldName).Append("[").Append(component.PoolCountFieldName).AppendLine("++] = page;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static void __xeno_WritePage_").Append(suffix).Append("(ref __XenoPage page, int slot, in ").Append(typeName).AppendLine(" component) {");
+            sb.Append("        var componentPage = page.").Append(component.PagesFieldName).AppendLine(";");
+            sb.AppendLine("        if (componentPage == null) {");
+            sb.Append("            componentPage = __xeno_RentPage_").Append(suffix).AppendLine("();");
+            sb.Append("            page.").Append(component.PagesFieldName).AppendLine(" = componentPage;");
+            sb.AppendLine("        }");
+            sb.AppendLine("        componentPage[slot] = component;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static ref ").Append(typeName).Append(" __xeno_RefPage_").Append(suffix).AppendLine("(ref __XenoPage page, int slot) {");
+            sb.Append("        return ref page.").Append(component.PagesFieldName).AppendLine("[slot];");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static void __xeno_ClearPage_").Append(suffix).AppendLine("(ref __XenoPage page, int slot) {");
+            sb.Append("        if (!").Append(component.HelperName).AppendLine(".IsReferenceOrContainsReferences) return;");
+            sb.Append("        var componentPage = page.").Append(component.PagesFieldName).AppendLine(";");
+            sb.AppendLine("        if (componentPage == null) return;");
+            sb.AppendLine("        componentPage[slot] = default;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+        }
+    }
+
+    private static void AppendGeneratedInlinePageMethods(StringBuilder sb, ComponentInfo component, string typeName, string suffix)
+    {
+        var fixedBufferTypeName = FixedBufferTypeName(component.Type);
+        if (fixedBufferTypeName != null)
+        {
+            sb.Append("    private unsafe struct ").Append(component.InlinePageName).AppendLine(" {");
+            sb.Append("        public fixed ").Append(fixedBufferTypeName).AppendLine(" __xeno_values[__xeno_pageCap];");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static unsafe void __xeno_WritePage_").Append(suffix).Append("(ref __XenoPage page, int slot, in ").Append(typeName).AppendLine(" component) {");
+            sb.Append("        page.").Append(component.PagesFieldName).AppendLine(".__xeno_values[slot] = component;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static unsafe bool __xeno_TryCopyPage_").Append(suffix).Append("(ref __XenoPage page, int slot, out ").Append(typeName).AppendLine(" component) {");
+            sb.Append("        component = page.").Append(component.PagesFieldName).AppendLine(".__xeno_values[slot];");
+            sb.AppendLine("        return true;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static unsafe ref ").Append(typeName).Append(" __xeno_RefPage_").Append(suffix).AppendLine("(ref __XenoPage page, int slot) {");
+            sb.Append("        return ref page.").Append(component.PagesFieldName).AppendLine(".__xeno_values[slot];");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("    private static void __xeno_ClearPage_").Append(suffix).AppendLine("(ref __XenoPage page, int slot) {");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            return;
+        }
+
+        sb.AppendLine("    [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential)]");
+        sb.Append("    private struct ").Append(component.InlinePageName).AppendLine(" {");
+        for (var i = 0; i < 64; i++)
+            sb.Append("        public ").Append(typeName).Append(" __xeno_").Append(i.ToString("X2")).AppendLine(";");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        sb.Append("    private static void __xeno_WritePage_").Append(suffix).Append("(ref __XenoPage page, int slot, in ").Append(typeName).AppendLine(" component) {");
+        sb.Append("        __xeno_RefPage_").Append(suffix).AppendLine("(ref page, slot) = component;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        sb.Append("    private static bool __xeno_TryCopyPage_").Append(suffix).Append("(ref __XenoPage page, int slot, out ").Append(typeName).AppendLine(" component) {");
+        sb.Append("        component = __xeno_RefPage_").Append(suffix).AppendLine("(ref page, slot);");
+        sb.AppendLine("        return true;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        sb.Append("    private static ref ").Append(typeName).Append(" __xeno_RefPage_").Append(suffix).AppendLine("(ref __XenoPage page, int slot) {");
+        sb.Append("        return ref global::System.Runtime.CompilerServices.Unsafe.Add(ref page.")
+            .Append(component.PagesFieldName).AppendLine(".__xeno_00, slot);");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        sb.Append("    private static void __xeno_ClearPage_").Append(suffix).AppendLine("(ref __XenoPage page, int slot) {");
+        sb.Append("        if (!").Append(component.HelperName).AppendLine(".IsReferenceOrContainsReferences) return;");
+        sb.Append("        __xeno_RefPage_").Append(suffix).AppendLine("(ref page, slot) = default;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
     }
 
     private static void AppendGeneratedComponentHelpers(StringBuilder sb, INamedTypeSymbol worldSymbol, List<ComponentInfo> components)
@@ -734,29 +1005,47 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         foreach (var component in components)
         {
             var typeName = TypeName(component.Type);
+            var suffix = component.Index.ToString("X2");
             sb.Append("    private static class ").Append(component.HelperName).AppendLine(" {");
             sb.Append("        internal const int Index = ").Append(component.Index).AppendLine(";");
+            sb.Append("        internal static readonly bool IsReferenceOrContainsReferences = ComponentIsReferenceOrContainsReferences<").Append(typeName).AppendLine(">();");
             sb.AppendLine();
             sb.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("        internal static void Write(").Append(worldTypeName).Append(" world, uint entityId, in ").Append(typeName).AppendLine(" component) {");
-            sb.Append("            __xeno_WritePage(ref world.").Append(component.PagesFieldName).AppendLine(", entityId, component);");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("        internal static bool TryCopy(").Append(worldTypeName).Append(" world, uint entityId, out ").Append(typeName).AppendLine(" component) {");
-            sb.Append("            component = default(").Append(typeName).AppendLine(");");
-            sb.Append("            return __xeno_TryCopyPage(world.").Append(component.PagesFieldName).AppendLine(", entityId, ref component);");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("        internal static void Clear(").Append(worldTypeName).Append(" world, uint entityId) {");
-            sb.Append(" __xeno_ClearPage(world.").Append(component.PagesFieldName).AppendLine(", entityId); }");
-            sb.AppendLine();
-            sb.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("        internal static ref ").Append(typeName).Append(" Ref(").Append(worldTypeName).AppendLine(" world, uint entityId) {");
+            sb.Append("        internal static void Write(").Append(worldTypeName).Append(" world, int entityId, in ").Append(typeName).AppendLine(" component) {");
             sb.AppendLine("            var pid = entityId >> __xeno_pageShift;");
             sb.AppendLine("            var slot = entityId & __xeno_pageMask;");
-            sb.Append("            return ref world.").Append(component.PagesFieldName).AppendLine("[pid][slot];");
+            sb.AppendLine("            ref var page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(world.__xeno_pages), pid);");
+            sb.Append("            __xeno_WritePage_").Append(suffix).AppendLine("(ref page, slot, in component);");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("        internal static bool TryCopy(").Append(worldTypeName).Append(" world, int entityId, out ").Append(typeName).AppendLine(" component) {");
+            sb.Append("            component = default(").Append(typeName).AppendLine(");");
+            sb.AppendLine("            var pid = entityId >> __xeno_pageShift;");
+            sb.AppendLine("            var slot = entityId & __xeno_pageMask;");
+            sb.AppendLine("            if (pid >= world.__xeno_pages.Length) return false;");
+            sb.AppendLine("            ref var page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(world.__xeno_pages), pid);");
+            if (component.Inline)
+                sb.Append("            return __xeno_TryCopyPage_").Append(suffix).AppendLine("(ref page, slot, out component);");
+            else
+                sb.Append("            return __xeno_TryCopyPage(page.").Append(component.PagesFieldName).AppendLine(", slot, ref component);");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("        internal static void Clear(").Append(worldTypeName).AppendLine(" world, int entityId) {");
+            sb.AppendLine("            var pid = entityId >> __xeno_pageShift;");
+            sb.AppendLine("            var slot = entityId & __xeno_pageMask;");
+            sb.AppendLine("            if (pid >= world.__xeno_pages.Length) return;");
+            sb.AppendLine("            ref var page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(world.__xeno_pages), pid);");
+            sb.Append("            __xeno_ClearPage_").Append(suffix).AppendLine("(ref page, slot);");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+            sb.Append("        internal static ref ").Append(typeName).Append(" Ref(").Append(worldTypeName).AppendLine(" world, int entityId) {");
+            sb.AppendLine("            var pid = entityId >> __xeno_pageShift;");
+            sb.AppendLine("            var slot = entityId & __xeno_pageMask;");
+            sb.AppendLine("            ref var page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(world.__xeno_pages), pid);");
+            sb.Append("            return ref __xeno_RefPage_").Append(suffix).AppendLine("(ref page, slot);");
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -766,8 +1055,10 @@ public sealed class WorldSourceGenerator : ISourceGenerator
     private static void AppendGeneratedSingleComponentMethods(
         StringBuilder sb,
         List<ComponentInfo> components,
+        List<ComponentSetInfo> componentSets,
         IReadOnlyDictionary<ComponentInfo, ComponentSetInfo> singleMasks)
     {
+        var hasMaterializedQueries = componentSets.Any(s => s.MaterializedQuery);
         foreach (var component in components)
         {
             var typeName = TypeName(component.Type);
@@ -775,11 +1066,22 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             var maskFieldName = singleMasks[component].MaskFieldName;
             var apiName = component.ApiName;
             var displayName = component.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            var suffix = component.Index.ToString("X2");
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("    public global::Xeno.Entity CreateEntity_NoLock(in ").Append(typeName).AppendLine(" component) {");
-            sb.Append("        var __xeno_entity = CreateEntityWithMask_NoLock(in ").Append(maskFieldName).AppendLine(");");
-            sb.Append("        ").Append(helperName).AppendLine(".Write(this, EntityId(in __xeno_entity), in component);");
+            sb.Append("    internal global::Xeno.Entity CreateEntity_NoLock(in ").Append(typeName).AppendLine(" component) {");
+            sb.Append("        var __xeno_entity = CreateEntityWithMask_NoLock(in ").Append(maskFieldName)
+                .Append(", ref ").Append(singleMasks[component].ArchetypeCacheFieldName).AppendLine(");");
+            sb.AppendLine("        var __xeno_eid = __xeno_entity.Id;");
+            sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
+            sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
+            sb.AppendLine("        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages), __xeno_pid);");
+            sb.Append("        __xeno_WritePage_").Append(suffix).AppendLine("(ref __xeno_page, __xeno_slot, in component);");
+            if (HasKnownGeneratedQueryAdds(componentSets, singleMasks[component]))
+            {
+                sb.AppendLine("        var __xeno_bit = 1ul << __xeno_slot;");
+                AppendKnownGeneratedQueryAdds(sb, componentSets, singleMasks[component], "__xeno_pid", "__xeno_bit");
+            }
             sb.AppendLine("        return __xeno_entity;");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -792,11 +1094,28 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             sb.AppendLine();
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("    public void Add_NoLock(in global::Xeno.Entity entity, in ").Append(typeName).AppendLine(" component) {");
-            sb.AppendLine("        if (!IsEntityValid(entity)) return;");
-            sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
-            sb.Append("        ").Append(helperName).AppendLine(".Write(this, __xeno_eid, in component);");
-            sb.Append("        AddGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(maskFieldName).AppendLine(");");
+            sb.Append("    internal void Add_NoLock(in global::Xeno.Entity entity, in ").Append(typeName).AppendLine(" component) {");
+            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
+            sb.AppendLine("        var __xeno_eid = entity.Id;");
+            sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
+            sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
+            if (hasMaterializedQueries)
+                sb.AppendLine("        var __xeno_bit = 1ul << __xeno_slot;");
+            sb.AppendLine("        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages), __xeno_pid);");
+            sb.Append("        __xeno_WritePage_").Append(suffix).AppendLine("(ref __xeno_page, __xeno_slot, in component);");
+            sb.Append("        AddGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(maskFieldName).Append(", ")
+                .Append(singleMasks[component].TransitionKey)
+                .Append(", ref ").Append(singleMasks[component].AddSourceCacheFieldName)
+                .Append(", ref ").Append(singleMasks[component].AddTargetCacheFieldName)
+                .AppendLine(");");
+            if (hasMaterializedQueries)
+            {
+                if (hasMaterializedQueries)
+                {
+                    sb.AppendLine("        var __xeno_newMask = GetGeneratedEntityMask(__xeno_eid);");
+                    sb.AppendLine("        __xeno_UpdateGeneratedQueries(__xeno_pid, __xeno_bit, in __xeno_newMask);");
+                }
+            }
             sb.AppendLine("    }");
             sb.AppendLine();
 
@@ -808,13 +1127,25 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             sb.AppendLine();
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-            sb.Append("    public void Remove").Append(apiName).AppendLine("_NoLock(in global::Xeno.Entity entity) {");
-            sb.AppendLine("        if (!IsEntityValid(entity)) return;");
-            sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
+            sb.Append("    internal void Remove").Append(apiName).AppendLine("_NoLock(in global::Xeno.Entity entity) {");
+            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
+            sb.AppendLine("        var __xeno_eid = entity.Id;");
             sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
             sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
-            sb.Append("        __xeno_ClearPageAt(this.").Append(component.PagesFieldName).AppendLine(", __xeno_pid, __xeno_slot);");
-            sb.Append("        RemoveGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(maskFieldName).AppendLine(");");
+            if (hasMaterializedQueries)
+                sb.AppendLine("        var __xeno_bit = 1ul << __xeno_slot;");
+            sb.AppendLine("        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages), __xeno_pid);");
+            sb.Append("        __xeno_ClearPage_").Append(suffix).AppendLine("(ref __xeno_page, __xeno_slot);");
+            sb.Append("        RemoveGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(maskFieldName).Append(", ")
+                .Append(singleMasks[component].TransitionKey)
+                .Append(", ref ").Append(singleMasks[component].RemoveSourceCacheFieldName)
+                .Append(", ref ").Append(singleMasks[component].RemoveTargetCacheFieldName)
+                .AppendLine(");");
+            if (hasMaterializedQueries)
+            {
+                sb.AppendLine("        var __xeno_newMask = GetGeneratedEntityMask(__xeno_eid);");
+                sb.AppendLine("        __xeno_UpdateGeneratedQueries(__xeno_pid, __xeno_bit, in __xeno_newMask);");
+            }
             sb.AppendLine("    }");
             sb.AppendLine();
 
@@ -827,22 +1158,23 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public bool TryGet").Append(apiName).Append("(in global::Xeno.Entity entity, out ").Append(typeName).AppendLine(" component) {");
-            sb.AppendLine("        if (!IsEntityValid(entity)) { component = default; return false; }");
-            sb.Append("        return ").Append(helperName).AppendLine(".TryCopy(this, EntityId(in entity), out component);");
+            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) { component = default; return false; }");
+            sb.Append("        if (!HasGeneratedMask(entity, in ").Append(maskFieldName).AppendLine(")) { component = default; return false; }");
+            sb.Append("        return ").Append(helperName).AppendLine(".TryCopy(this, entity.Id, out component);");
             sb.AppendLine("    }");
             sb.AppendLine();
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public ref ").Append(typeName).Append(" Ref").Append(apiName).AppendLine("(in global::Xeno.Entity entity) {");
-            sb.AppendLine("        if (!IsEntityValid(entity)) throw new global::System.InvalidOperationException();");
+            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) throw new global::System.InvalidOperationException();");
             sb.Append("        if (!HasGeneratedMask(entity, in ").Append(maskFieldName).Append(")) __xeno_ThrowMissingComponent(\"").Append(displayName).AppendLine("\");");
-            sb.Append("        return ref ").Append(helperName).AppendLine(".Ref(this, EntityId(in entity));");
+            sb.Append("        return ref ").Append(helperName).AppendLine(".Ref(this, entity.Id);");
             sb.AppendLine("    }");
             sb.AppendLine();
 
             sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.Append("    public bool Has").Append(apiName).AppendLine("(in global::Xeno.Entity entity) {");
-            sb.AppendLine("        if (!IsEntityValid(entity)) return false;");
+            sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return false;");
             sb.Append("        return HasGeneratedMask(entity, in ").Append(maskFieldName).AppendLine(");");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -861,6 +1193,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         List<ComponentInfo> components,
         List<ComponentSetInfo> componentSets)
     {
+        var hasMaterializedQueries = componentSets.Any(s => s.MaterializedQuery);
         foreach (var method in requestedApiMethods)
         {
             var componentInfos = method.ComponentTypes
@@ -886,14 +1219,26 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             else if (method.Kind == RequestedApiMethodKind.Remove)
             {
                 sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                sb.Append("    public void ").Append(method.MethodName).Append("_NoLock(in global::Xeno.Entity entity) {").AppendLine();
-                sb.AppendLine("        if (!IsEntityValid(entity)) return;");
-                sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
+                sb.Append("    internal void ").Append(method.MethodName).Append("_NoLock(in global::Xeno.Entity entity) {").AppendLine();
+                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
+                sb.AppendLine("        var __xeno_eid = entity.Id;");
                 sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
                 sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
+                if (hasMaterializedQueries)
+                    sb.AppendLine("        var __xeno_bit = 1ul << __xeno_slot;");
+                sb.AppendLine("        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages), __xeno_pid);");
                 for (var i = 0; i < componentInfos.Length; i++)
-                    sb.Append("        __xeno_ClearPageAt(this.").Append(componentInfos[i].PagesFieldName).AppendLine(", __xeno_pid, __xeno_slot);");
-                sb.Append("        RemoveGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(set.MaskFieldName).AppendLine(");");
+                    sb.Append("        __xeno_ClearPage_").Append(componentInfos[i].Index.ToString("X2")).AppendLine("(ref __xeno_page, __xeno_slot);");
+                sb.Append("        RemoveGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(set.MaskFieldName).Append(", ")
+                    .Append(set.TransitionKey)
+                    .Append(", ref ").Append(set.RemoveSourceCacheFieldName)
+                    .Append(", ref ").Append(set.RemoveTargetCacheFieldName)
+                    .AppendLine(");");
+                if (hasMaterializedQueries)
+                {
+                    sb.AppendLine("        var __xeno_newMask = GetGeneratedEntityMask(__xeno_eid);");
+                    sb.AppendLine("        __xeno_UpdateGeneratedQueries(__xeno_pid, __xeno_bit, in __xeno_newMask);");
+                }
                 sb.AppendLine("    }");
                 sb.AppendLine();
                 sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
@@ -904,14 +1249,24 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             else if (method.Kind == RequestedApiMethodKind.CreateEntity)
             {
                 sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                sb.Append("    public global::Xeno.Entity CreateEntity_NoLock(")
+                sb.Append("    internal global::Xeno.Entity CreateEntity_NoLock(")
                     .Append(string.Join(", ", componentInfos.Select((component, index) => $"in {TypeName(component.Type)} {parameterNames[index]}")))
                     .AppendLine(") {");
-                sb.Append("        var __xeno_entity = CreateEntityWithMask_NoLock(in ").Append(set.MaskFieldName).AppendLine(");");
+                sb.Append("        var __xeno_entity = CreateEntityWithMask_NoLock(in ").Append(set.MaskFieldName)
+                    .Append(", ref ").Append(set.ArchetypeCacheFieldName).AppendLine(");");
+                sb.AppendLine("        var __xeno_eid = __xeno_entity.Id;");
+                sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
+                sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
+                sb.AppendLine("        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages), __xeno_pid);");
                 for (var i = 0; i < componentInfos.Length; i++)
                 {
-                    sb.Append("        ").Append(componentInfos[i].HelperName).Append(".Write(this, EntityId(in __xeno_entity), in ")
+                    sb.Append("        __xeno_WritePage_").Append(componentInfos[i].Index.ToString("X2")).Append("(ref __xeno_page, __xeno_slot, in ")
                         .Append(parameterNames[i]).AppendLine(");");
+                }
+                if (HasKnownGeneratedQueryAdds(componentSets, set))
+                {
+                    sb.AppendLine("        var __xeno_bit = 1ul << __xeno_slot;");
+                    AppendKnownGeneratedQueryAdds(sb, componentSets, set, "__xeno_pid", "__xeno_bit");
                 }
                 sb.AppendLine("        return __xeno_entity;");
                 sb.AppendLine("    }");
@@ -924,17 +1279,31 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             else
             {
                 sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-                sb.Append("    public void Add_NoLock(in global::Xeno.Entity entity, ")
+                sb.Append("    internal void Add_NoLock(in global::Xeno.Entity entity, ")
                     .Append(string.Join(", ", componentInfos.Select((component, index) => $"in {TypeName(component.Type)} {parameterNames[index]}")))
                     .AppendLine(") {");
-                sb.AppendLine("        if (!IsEntityValid(entity)) return;");
-                sb.AppendLine("        var __xeno_eid = EntityId(in entity);");
+                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return;");
+                sb.AppendLine("        var __xeno_eid = entity.Id;");
+                sb.AppendLine("        var __xeno_pid = __xeno_eid >> __xeno_pageShift;");
+                sb.AppendLine("        var __xeno_slot = __xeno_eid & __xeno_pageMask;");
+                if (hasMaterializedQueries)
+                    sb.AppendLine("        var __xeno_bit = 1ul << __xeno_slot;");
+                sb.AppendLine("        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages), __xeno_pid);");
                 for (var i = 0; i < componentInfos.Length; i++)
                 {
-                    sb.Append("        ").Append(componentInfos[i].HelperName).Append(".Write(this, __xeno_eid, in ")
+                    sb.Append("        __xeno_WritePage_").Append(componentInfos[i].Index.ToString("X2")).Append("(ref __xeno_page, __xeno_slot, in ")
                         .Append(parameterNames[i]).AppendLine(");");
                 }
-                sb.Append("        AddGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(set.MaskFieldName).AppendLine(");");
+                sb.Append("        AddGeneratedMask_NoLock_Valid(__xeno_eid, in ").Append(set.MaskFieldName).Append(", ")
+                    .Append(set.TransitionKey)
+                    .Append(", ref ").Append(set.AddSourceCacheFieldName)
+                    .Append(", ref ").Append(set.AddTargetCacheFieldName)
+                    .AppendLine(");");
+                if (hasMaterializedQueries)
+                {
+                    sb.AppendLine("        var __xeno_newMask = GetGeneratedEntityMask(__xeno_eid);");
+                    sb.AppendLine("        __xeno_UpdateGeneratedQueries(__xeno_pid, __xeno_bit, in __xeno_newMask);");
+                }
                 sb.AppendLine("    }");
                 sb.AppendLine();
                 sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
@@ -953,7 +1322,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             if (method.Kind == RequestedApiMethodKind.HasAll)
             {
-                sb.AppendLine("        if (!IsEntityValid(entity)) return false;");
+                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return false;");
                 sb.Append("        return HasGeneratedMask(entity, in ").Append(set.MaskFieldName).AppendLine(");");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -962,7 +1331,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
             if (method.Kind == RequestedApiMethodKind.HasAny)
             {
-                sb.AppendLine("        if (!IsEntityValid(entity)) return false;");
+                sb.AppendLine("        if (!IsEntityValid_Internal(entity)) return false;");
                 sb.Append("        return ").Append(string.Join(" || ", componentInfos.Select(component => $"HasGeneratedMask(entity, in {FindComponentSet(componentSets, new[] { component }).MaskFieldName})"))).AppendLine(";");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -996,16 +1365,42 @@ public sealed class WorldSourceGenerator : ISourceGenerator
     private static void AppendGeneratedCleanupOverride(
         StringBuilder sb,
         List<ComponentInfo> components,
+        List<ComponentSetInfo> componentSets,
         IReadOnlyDictionary<ComponentInfo, ComponentSetInfo> singleMasks)
     {
-        sb.AppendLine("    protected override void ClearGeneratedEntityData(in uint entityId, in global::Xeno.BitSetReadOnly mask) {");
+        var hasMaterializedQueries = componentSets.Any(s => s.MaterializedQuery);
+        sb.AppendLine("    protected override void ClearGeneratedEntityData(in int entityId, in global::Xeno.BitSetReadOnly mask) {");
+        sb.AppendLine("        var __xeno_pid = entityId >> __xeno_pageShift;");
+        sb.AppendLine("        var __xeno_slot = entityId & __xeno_pageMask;");
+        if (hasMaterializedQueries)
+        {
+            sb.AppendLine("        var __xeno_bit = 1ul << __xeno_slot;");
+            sb.AppendLine("        __xeno_RemoveGeneratedQueries(__xeno_pid, __xeno_bit);");
+        }
+        sb.AppendLine("        if (__xeno_pid >= __xeno_pages.Length) return;");
+        sb.AppendLine("        ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages), __xeno_pid);");
         foreach (var component in components)
         {
             sb.Append("        if (GeneratedMaskIncludes(in mask, in ")
                 .Append(singleMasks[component].MaskFieldName).AppendLine(")) {");
-            sb.Append("            __xeno_ClearPage(").Append(component.PagesFieldName).AppendLine(", entityId);");
+            sb.Append("            __xeno_ClearPage_").Append(component.Index.ToString("X2")).AppendLine("(ref __xeno_page, __xeno_slot);");
             sb.AppendLine("        }");
         }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        sb.AppendLine("    protected override void DisposeGeneratedData_Internal() {");
+        sb.AppendLine("        if (__xeno_pages == null) return;");
+        sb.AppendLine("        ref var __xeno_pagesRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages);");
+        sb.AppendLine("        for (var __xeno_p = 0; __xeno_p < __xeno_pages.Length; __xeno_p++) {");
+        sb.AppendLine("            ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_pagesRef, __xeno_p);");
+        foreach (var component in components.Where(c => !c.Inline))
+        {
+            sb.Append("            __xeno_ReturnPage_").Append(component.Index.ToString("X2")).Append("(__xeno_page.").Append(component.PagesFieldName).AppendLine(");");
+            sb.Append("            __xeno_page.").Append(component.PagesFieldName).AppendLine(" = null;");
+        }
+        sb.AppendLine("        }");
+        sb.AppendLine("        __xeno_pages = null;");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -1030,6 +1425,14 @@ public sealed class WorldSourceGenerator : ISourceGenerator
     {
         var calls = TickCalls(systems).ToArray();
         var usesComponentLoop = calls.Any(c => c.ComponentParameters.Length > 0);
+        var usesChunkLoop = calls.Any(c => c.ComponentParameters.Length > 0 && !FindComponentSet(
+            componentSets,
+            c.ComponentParameters.Select(p => components.First(component => SymbolEqualityComparer.Default.Equals(component.Type, p.Type))).ToArray()
+        ).MaterializedQuery);
+        var usesMaterializedLoop = calls.Any(c => c.ComponentParameters.Length > 0 && FindComponentSet(
+            componentSets,
+            c.ComponentParameters.Select(p => components.First(component => SymbolEqualityComparer.Default.Equals(component.Type, p.Type))).ToArray()
+        ).MaterializedQuery);
         var usesDelta = calls.Any(c => MethodUsesDeltaParameter(c.Method, uniformAttributeType));
         var usesEntity = calls.Any(c => c.Method.Parameters.Any(p => IsEntityParameter(p, entityType)));
         var usedComponents = calls
@@ -1038,19 +1441,13 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             .Distinct()
             .OrderBy(c => c.Index)
             .ToArray();
-        var directCalls = calls
-            .Where(c => TryGetDirectFunctionPointerTarget(c, out _))
-            .ToArray();
 
         sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        sb.Append("    public ");
-        if (directCalls.Length > 0)
-            sb.Append("unsafe ");
-        sb.AppendLine("override void Tick(float f) {");
-        AppendTickLocals(sb, usesComponentLoop, usesDelta, usesEntity, usedComponents, directCalls, entityType);
-        AppendStage(sb, systems, SystemMethodType.PreUpdate, components, componentSets, entityType, uniformAttributeType, true);
-        AppendStage(sb, systems, SystemMethodType.Update, components, componentSets, entityType, uniformAttributeType, true);
-        AppendStage(sb, systems, SystemMethodType.PostUpdate, components, componentSets, entityType, uniformAttributeType, true);
+        sb.AppendLine("    public override void Tick(float f) {");
+        AppendTickLocals(sb, usesComponentLoop, usesChunkLoop, usesMaterializedLoop, usesDelta, usesEntity, usedComponents, entityType);
+        AppendStage(sb, systems, SystemMethodType.PreUpdate, components, componentSets, entityType, uniformAttributeType);
+        AppendStage(sb, systems, SystemMethodType.Update, components, componentSets, entityType, uniformAttributeType);
+        AppendStage(sb, systems, SystemMethodType.PostUpdate, components, componentSets, entityType, uniformAttributeType);
         sb.AppendLine("        IncrementTicks();");
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -1066,35 +1463,41 @@ public sealed class WorldSourceGenerator : ISourceGenerator
     private static void AppendTickLocals(
         StringBuilder sb,
         bool usesComponentLoop,
+        bool usesChunkLoop,
+        bool usesMaterializedLoop,
         bool usesDelta,
         bool usesEntity,
         ComponentInfo[] usedComponents,
-        SystemCall[] directCalls,
         INamedTypeSymbol entityType)
     {
         if (usesComponentLoop)
         {
-            sb.AppendLine("        var __xeno_chunkCount = 0;");
-            sb.AppendLine("        var __xeno_chunk = 0;");
             sb.AppendLine("        var __xeno_i = 0;");
             sb.AppendLine("        var __xeno_count = 0;");
-            sb.AppendLine("        uint __xeno_eid = 0;");
-            sb.AppendLine("        uint __xeno_pid = 0;");
-            sb.AppendLine("        uint __xeno_slot = 0;");
-            sb.AppendLine("        uint[] __xeno_buf = null;");
+            if (usesChunkLoop || usesEntity)
+            {
+                sb.AppendLine("        int __xeno_eid = 0;");
+                sb.AppendLine("        int __xeno_pid = 0;");
+            }
+            sb.AppendLine("        int __xeno_slot = 0;");
+            if (usesMaterializedLoop)
+            {
+                sb.AppendLine("        var __xeno_pageCount = 0;");
+                sb.AppendLine("        ulong __xeno_slots = 0;");
+            }
+            if (usesChunkLoop)
+            {
+                sb.AppendLine("        var __xeno_chunkCount = 0;");
+                sb.AppendLine("        var __xeno_chunk = 0;");
+                sb.AppendLine("        int[] __xeno_buf = null;");
+            }
         }
         if (usesEntity)
             sb.Append("        ").Append(TypeName(entityType)).AppendLine("[] __xeno_entities = null;");
         if (usesDelta)
             sb.AppendLine("        var __xeno_delta = f;");
-        foreach (var component in usedComponents)
+        foreach (var component in usedComponents.Where(c => !c.Inline))
             sb.Append("        ").Append(TypeName(component.Type)).Append("[] ").Append(ComponentPageFieldName(component)).AppendLine(" = null;");
-        foreach (var call in directCalls)
-        {
-            TryGetDirectFunctionPointerTarget(call, out var target);
-            sb.Append("        ").Append(DirectFunctionPointerType(call)).Append(' ')
-                .Append(DirectFunctionPointerLocalName(call)).Append(" = ").Append(target).AppendLine(";");
-        }
     }
 
     private static void AppendStop(StringBuilder sb, List<RegisteredSystem> systems)
@@ -1113,60 +1516,143 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         List<ComponentInfo> components,
         List<ComponentSetInfo> componentSets,
         INamedTypeSymbol entityType,
-        INamedTypeSymbol uniformAttributeType,
-        bool useDirectFunctionPointerLocals = false)
+        INamedTypeSymbol uniformAttributeType)
     {
-        foreach (var call in OrderedStageCalls(systems, stage))
-            if (call.ComponentParameters.Length == 0)
-                AppendDirectCall(sb, call, entityType, uniformAttributeType, useDirectFunctionPointerLocals);
-            else
-                AppendComponentLoop(sb, call, components, componentSets, entityType, uniformAttributeType, useDirectFunctionPointerLocals);
+        var calls = OrderedStageCalls(systems, stage).ToArray();
+        for (var i = 0; i < calls.Length;) {
+            var call = calls[i];
+            if (call.ComponentParameters.Length == 0) {
+                AppendDirectCall(sb, call, entityType, uniformAttributeType);
+                i++;
+                continue;
+            }
+
+            if (!call.Pure) {
+                AppendComponentLoop(sb, new[] { call }, components, componentSets, entityType, uniformAttributeType);
+                i++;
+                continue;
+            }
+
+            var setKey = ComponentSetKey(GetCallComponentInfos(call, components));
+            var count = 1;
+            while (i + count < calls.Length) {
+                var next = calls[i + count];
+                if (!next.Pure || next.ComponentParameters.Length == 0)
+                    break;
+                if (ComponentSetKey(GetCallComponentInfos(next, components)) != setKey)
+                    break;
+                count++;
+            }
+
+            AppendComponentLoop(sb, calls.Skip(i).Take(count).ToArray(), components, componentSets, entityType, uniformAttributeType);
+            i += count;
+        }
     }
 
     private static void AppendDirectCall(
         StringBuilder sb,
         SystemCall call,
         INamedTypeSymbol entityType,
-        INamedTypeSymbol uniformAttributeType,
-        bool useDirectFunctionPointerLocals)
+        INamedTypeSymbol uniformAttributeType)
     {
-        AppendInvocation(sb, "        ", call, null, entityType, uniformAttributeType, useDirectFunctionPointerLocals);
+        AppendInvocation(sb, "        ", call, null, entityType, uniformAttributeType);
     }
 
     private static void AppendComponentLoop(
         StringBuilder sb,
-        SystemCall call,
+        IReadOnlyList<SystemCall> calls,
         List<ComponentInfo> components,
         List<ComponentSetInfo> componentSets,
         INamedTypeSymbol entityType,
-        INamedTypeSymbol uniformAttributeType,
-        bool useDirectFunctionPointerLocals)
+        INamedTypeSymbol uniformAttributeType)
     {
-        var componentInfos = call.ComponentParameters
+        var firstCall = calls[0];
+        var componentInfos = firstCall.ComponentParameters
             .Select(p => components.First(c => SymbolEqualityComparer.Default.Equals(c.Type, p.Type)))
             .ToArray();
-        var hasEntityParameter = call.Method.Parameters.Any(p => IsEntityParameter(p, entityType));
+        var hasEntityParameter = calls.Any(call => call.Method.Parameters.Any(p => IsEntityParameter(p, entityType)));
 
         var set = FindComponentSet(componentSets, componentInfos);
+        if (set.MaterializedQuery)
+        {
+            AppendMaterializedComponentLoop(sb, calls, componentInfos, set, hasEntityParameter, entityType, uniformAttributeType);
+            return;
+        }
 
         sb.Append("        __xeno_chunkCount = MatchGeneratedChunks(in ").Append(set.MaskFieldName).AppendLine(", ref __xeno_chunks, ref __xeno_counts);");
         if (hasEntityParameter)
             sb.AppendLine("        __xeno_entities = entities;");
-        sb.AppendLine("        for (__xeno_chunk = 0; __xeno_chunk < __xeno_chunkCount; __xeno_chunk++) {");
-        sb.AppendLine("            __xeno_buf = global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_chunks), __xeno_chunk);");
-        sb.AppendLine("            __xeno_count = global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_counts), __xeno_chunk);");
-        sb.AppendLine("            for (__xeno_i = 0; __xeno_i < __xeno_count; __xeno_i++) {");
-        sb.AppendLine("                __xeno_eid = global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_buf), __xeno_i);");
-        sb.AppendLine("                __xeno_pid = __xeno_eid >> __xeno_pageShift;");
-        sb.AppendLine("                __xeno_slot = __xeno_eid & __xeno_pageMask;");
-        foreach (var component in componentInfos)
+        sb.AppendLine("        if (__xeno_chunkCount != 0) {");
+        sb.AppendLine("            ref var __xeno_chunksRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_chunks);");
+        sb.AppendLine("            ref var __xeno_countsRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_counts);");
+        sb.AppendLine("            ref var __xeno_pagesRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages);");
+        sb.AppendLine("            for (__xeno_chunk = 0; __xeno_chunk < __xeno_chunkCount; __xeno_chunk++) {");
+        sb.AppendLine("                __xeno_buf = global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_chunksRef, __xeno_chunk);");
+        sb.AppendLine("                __xeno_count = global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_countsRef, __xeno_chunk);");
+        sb.AppendLine("                ref var __xeno_bufRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_buf);");
+        sb.AppendLine("                for (__xeno_i = 0; __xeno_i < __xeno_count; __xeno_i++) {");
+        sb.AppendLine("                    __xeno_eid = global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_bufRef, __xeno_i);");
+        sb.AppendLine("                    __xeno_pid = __xeno_eid >> __xeno_pageShift;");
+        sb.AppendLine("                    __xeno_slot = __xeno_eid & __xeno_pageMask;");
+        sb.AppendLine("                    ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_pagesRef, __xeno_pid);");
+        foreach (var component in componentInfos.Where(c => !c.Inline))
         {
-            sb.Append("                ").Append(ComponentPageFieldName(component))
-                .Append(" = global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(")
+            sb.Append("                    ").Append(ComponentPageFieldName(component))
+                .Append(" = __xeno_page.")
                 .Append(component.PagesFieldName)
-                .AppendLine("), (int)__xeno_pid);");
+                .AppendLine(";");
         }
-        AppendInvocation(sb, "                ", call, components, entityType, uniformAttributeType, useDirectFunctionPointerLocals);
+        foreach (var call in calls)
+            AppendInvocation(sb, "                    ", call, componentInfos.ToList(), entityType, uniformAttributeType);
+        sb.AppendLine("                }");
+        sb.AppendLine("            }");
+        sb.AppendLine("        }");
+    }
+
+    private static void AppendMaterializedComponentLoop(
+        StringBuilder sb,
+        IReadOnlyList<SystemCall> calls,
+        ComponentInfo[] componentInfos,
+        ComponentSetInfo set,
+        bool hasEntityParameter,
+        INamedTypeSymbol entityType,
+        INamedTypeSymbol uniformAttributeType)
+    {
+        if (hasEntityParameter)
+            sb.AppendLine("        __xeno_entities = entities;");
+        sb.Append("        __xeno_count = ").Append(set.QueryCountFieldName).AppendLine(";");
+        sb.AppendLine("        if (__xeno_count != 0) {");
+        sb.Append("            ref var __xeno_activePagesRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(").Append(set.QueryActivePagesFieldName).AppendLine(");");
+        sb.AppendLine("            ref var __xeno_pagesRef = ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_pages);");
+        sb.Append("            __xeno_pageCount = ").Append(set.QueryActivePagesFieldName).AppendLine(".Length;");
+        sb.AppendLine("            for (__xeno_i = 0; __xeno_i < __xeno_pageCount; __xeno_i++) {");
+        sb.AppendLine("                __xeno_slots = global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_activePagesRef, __xeno_i);");
+        sb.AppendLine("                if (__xeno_slots == 0) continue;");
+        if (hasEntityParameter)
+            sb.AppendLine("                __xeno_pid = __xeno_i;");
+        sb.AppendLine("                ref var __xeno_page = ref global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_pagesRef, __xeno_i);");
+        sb.AppendLine("                __xeno_slot = 0;");
+        sb.AppendLine("                while (__xeno_slots != 0) {");
+        sb.AppendLine("                    while ((__xeno_slots & 1ul) == 0) {");
+        sb.AppendLine("                        __xeno_slot++;");
+        sb.AppendLine("                        __xeno_slots >>= 1;");
+        sb.AppendLine("                    }");
+        sb.AppendLine("                    do {");
+        if (hasEntityParameter)
+            sb.AppendLine("                        __xeno_eid = (__xeno_pid << __xeno_pageShift) | __xeno_slot;");
+        foreach (var component in componentInfos.Where(c => !c.Inline))
+        {
+            sb.Append("                        ").Append(ComponentPageFieldName(component))
+                .Append(" = __xeno_page.")
+                .Append(component.PagesFieldName)
+                .AppendLine(";");
+        }
+        foreach (var call in calls)
+            AppendInvocation(sb, "                        ", call, componentInfos.ToList(), entityType, uniformAttributeType);
+        sb.AppendLine("                        __xeno_slot++;");
+        sb.AppendLine("                        __xeno_slots >>= 1;");
+        sb.AppendLine("                    } while ((__xeno_slots & 1ul) != 0);");
+        sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
     }
@@ -1185,6 +1671,16 @@ public sealed class WorldSourceGenerator : ISourceGenerator
             .ToArray();
     }
 
+    private static string ComponentSetKey(ComponentInfo[] componentInfos)
+    {
+        return string.Join(",", componentInfos.OrderBy(c => c.Index).Select(c => c.Index));
+    }
+
+    private static string QuerySuffix(ComponentSetInfo set)
+    {
+        return string.Join("_", set.Components.Select(c => c.Index.ToString("X2")));
+    }
+
     private static IEnumerable<SystemCall> OrderedStageCalls(List<RegisteredSystem> systems, SystemMethodType stage)
     {
         return systems
@@ -1198,9 +1694,6 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
     private static string SystemInvocationTarget(SystemCall call)
     {
-        if (TryGetDirectFunctionPointerTarget(call, out var directTarget))
-            return directTarget;
-
         return call.Method.IsStatic
             ? $"{TypeName(call.System.Type)}.{call.Method.Name}"
             : $"{call.System.FieldName}.{call.Method.Name}";
@@ -1212,76 +1705,66 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         SystemCall call,
         List<ComponentInfo> components,
         INamedTypeSymbol entityType,
-        INamedTypeSymbol uniformAttributeType,
-        bool useDirectFunctionPointerLocal = false)
+        INamedTypeSymbol uniformAttributeType)
     {
-        var hasDirectTarget = TryGetDirectFunctionPointerTarget(call, out var directTarget);
-        var target = hasDirectTarget && useDirectFunctionPointerLocal
-            ? DirectFunctionPointerLocalName(call)
-            : hasDirectTarget
-                ? directTarget
-                : SystemInvocationTarget(call);
+        var target = SystemInvocationTarget(call);
         var arguments = string.Join(", ", call.Method.Parameters.Select(p => ArgumentExpression(p, components, entityType, uniformAttributeType)));
 
-        if (hasDirectTarget && !useDirectFunctionPointerLocal)
-        {
+        if (RequiresUnsafeInvocation(call, components, entityType, uniformAttributeType))
             sb.Append(indent).Append("unsafe { ").Append(target).Append('(').Append(arguments).AppendLine("); }");
-            return;
+        else
+            sb.Append(indent).Append(target).Append('(').Append(arguments).AppendLine(");");
+    }
+
+    private static bool RequiresUnsafeInvocation(
+        SystemCall call,
+        List<ComponentInfo> components,
+        INamedTypeSymbol entityType,
+        INamedTypeSymbol uniformAttributeType)
+    {
+        if (components == null)
+            return false;
+
+        foreach (var parameter in call.Method.Parameters)
+        {
+            if (SymbolEqualityComparer.Default.Equals(parameter.Type, entityType))
+                continue;
+            if (IsUniformParameter(parameter, uniformAttributeType, out _, out _))
+                continue;
+
+            var component = components.FirstOrDefault(c => SymbolEqualityComparer.Default.Equals(c.Type, parameter.Type));
+            if (component is { Inline: true } && FixedBufferTypeName(component.Type) != null)
+                return true;
         }
 
-        sb.Append(indent).Append(target).Append('(').Append(arguments).AppendLine(");");
-    }
-
-    private static bool TryGetDirectFunctionPointerTarget(SystemCall call, out string target)
-    {
-        target = null;
-
-        if (!call.Method.IsStatic || call.Method.Name != "Run")
-            return false;
-
-        var type = call.System.Type;
-        if (type.ContainingNamespace?.ToDisplayString() != "Benchmark.Xeno")
-            return false;
-
-        var holderArity = type.Name switch {
-            "XenoSystem1" => 1,
-            "XenoSystem2" => 2,
-            "XenoSystem3" => 3,
-            _ => 0,
-        };
-
-        if (holderArity == 0 || type.TypeArguments.Length != holderArity)
-            return false;
-
-        target = $"global::Benchmark.Xeno.XenoSystemHolder{holderArity}<{string.Join(", ", type.TypeArguments.Select(TypeName))}>.Method";
-        return true;
-    }
-
-    private static string DirectFunctionPointerLocalName(SystemCall call)
-    {
-        return $"__xeno_method_{call.System.Index:X2}_{call.Index:X2}";
-    }
-
-    private static string DirectFunctionPointerType(SystemCall call)
-    {
-        var parameters = call.Method.Parameters
-            .Select(p => $"{RefKindPrefix(p.RefKind)}{TypeName(p.Type)}")
-            .Concat(new[] { TypeName(call.Method.ReturnType) });
-
-        return $"delegate*<{string.Join(", ", parameters)}>";
-    }
-
-    private static string RefKindPrefix(RefKind refKind)
-    {
-        return refKind switch {
-            RefKind.Ref => "ref ",
-            RefKind.Out => "out ",
-            RefKind.In => "in ",
-            _ => string.Empty,
-        };
+        return false;
     }
 
     private static string ComponentPageFieldName(ComponentInfo component) => $"{component.PagesFieldName}_page";
+
+    private static string PageStorageTypeName(ComponentInfo component)
+    {
+        return component.Inline ? component.InlinePageName : $"{TypeName(component.Type)}[]";
+    }
+
+    private static string FixedBufferTypeName(ITypeSymbol type)
+    {
+        return type.SpecialType switch {
+            SpecialType.System_Boolean => "bool",
+            SpecialType.System_Byte => "byte",
+            SpecialType.System_SByte => "sbyte",
+            SpecialType.System_Int16 => "short",
+            SpecialType.System_UInt16 => "ushort",
+            SpecialType.System_Int32 => "int",
+            SpecialType.System_UInt32 => "uint",
+            SpecialType.System_Int64 => "long",
+            SpecialType.System_UInt64 => "ulong",
+            SpecialType.System_Char => "char",
+            SpecialType.System_Single => "float",
+            SpecialType.System_Double => "double",
+            _ => null,
+        };
+    }
 
     private static string ArgumentExpression(
         IParameterSymbol parameter,
@@ -1296,7 +1779,7 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         };
 
         if (SymbolEqualityComparer.Default.Equals(parameter.Type, entityType) && parameter.RefKind == RefKind.In)
-            return "global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_entities), (int)__xeno_eid)";
+            return "global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(__xeno_entities), __xeno_eid)";
 
         if (IsUniformParameter(parameter, uniformAttributeType, out var kind, out var name))
         {
@@ -1310,7 +1793,14 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         if (components != null)
         {
             var component = components.First(c => SymbolEqualityComparer.Default.Equals(c.Type, parameter.Type));
-            return $"ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference({ComponentPageFieldName(component)}), (int)__xeno_slot)";
+            if (component.Inline)
+            {
+                if (FixedBufferTypeName(component.Type) != null)
+                    return $"ref __xeno_page.{component.PagesFieldName}.__xeno_values[__xeno_slot]";
+                else
+                    return $"ref global::System.Runtime.CompilerServices.Unsafe.Add(ref __xeno_page.{component.PagesFieldName}.__xeno_00, __xeno_slot)";
+            }
+            return $"ref global::System.Runtime.CompilerServices.Unsafe.Add(ref global::System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference({ComponentPageFieldName(component)}), __xeno_slot)";
         }
 
         return $"{prefix}default";
@@ -1327,11 +1817,11 @@ public sealed class WorldSourceGenerator : ISourceGenerator
         return false;
     }
 
-    private static bool TryGetSystemMethod(IMethodSymbol method, INamedTypeSymbol systemMethodAttributeType, out SystemMethodType type, out int order, out bool noFuse)
+    private static bool TryGetSystemMethod(IMethodSymbol method, INamedTypeSymbol systemMethodAttributeType, out SystemMethodType type, out int order, out bool pure)
     {
         type = default;
         order = 0;
-        noFuse = false;
+        pure = false;
 
         var attribute = method.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, systemMethodAttributeType));
         if (attribute == null || attribute.ConstructorArguments.Length == 0 || attribute.ConstructorArguments[0].Value == null)
@@ -1339,7 +1829,10 @@ public sealed class WorldSourceGenerator : ISourceGenerator
 
         type = (SystemMethodType)(int)attribute.ConstructorArguments[0].Value;
         order = attribute.ConstructorArguments.Length > 1 && attribute.ConstructorArguments[1].Value is int value ? value : 0;
-        noFuse = TryGetNamedBool(attribute, "NoFuse");
+        pure = TryGetNamedBool(attribute, "Pure")
+               || (attribute.ConstructorArguments.Length > 2
+                   && attribute.ConstructorArguments[2].Value is bool positionalPure
+                   && positionalPure);
         return true;
     }
 

@@ -6,6 +6,19 @@ namespace Xeno.Tests;
 
 [TestFixture]
 public class BitSetTests {
+    private static unsafe BitSetReadOnly CreateMask(params int[] indices) {
+        var max = indices.Max();
+        var set = new BitSet(stackalloc ulong[BitSet.MaskSize(max)]) {
+            max = max
+        };
+
+        foreach (var index in indices)
+            set.Set(index);
+
+        set.FinalizeHash();
+        return set.AsReadOnly();
+    }
+
     [Test]
     [TestCase(0, 1)]
     [TestCase(32, 1)]
@@ -176,5 +189,62 @@ public class BitSetTests {
         Assert.That(result.max, Is.EqualTo(1));
         Assert.That(result.maskSize, Is.EqualTo(1));
         Assert.That(resultMask.indices, Is.EqualTo(new uint[] { 1 }));
+    }
+
+    [Test]
+    public unsafe void BitSetReadOnly_CollidingMasks_AreNotEqualAndDoNotIncludeEachOther() {
+        var left = CreateMask(0, 65);
+        var right = CreateMask(64, 65);
+
+        Assert.That(left.max, Is.EqualTo(right.max));
+        Assert.That(left.hash, Is.EqualTo(right.hash));
+        Assert.That(left.Equals(right), Is.False);
+
+        var rightSet = new BitSet(stackalloc ulong[BitSet.MaskSize(65)]) {
+            max = 65
+        };
+        rightSet.Set(64).Set(65).FinalizeHash();
+        Assert.That(left.Equals(rightSet), Is.False);
+
+        var leftCopy = left;
+        var rightCopy = right;
+        Assert.That(leftCopy.Includes(ref rightCopy), Is.False);
+        Assert.That(rightCopy.Includes(ref leftCopy), Is.False);
+    }
+
+    [Test]
+    public void BitSetReadOnly_CollidingHashes_DoNotCrossUnlessDataOverlaps() {
+        var left = CreateMask(0);
+        var right = CreateMask(64);
+
+        Assert.That(left.hash, Is.EqualTo(right.hash));
+
+        var leftCopy = left;
+        var rightCopy = right;
+        Assert.That(leftCopy.Cross(ref rightCopy), Is.False);
+
+        left = CreateMask(0, 65);
+        right = CreateMask(64, 65);
+        leftCopy = left;
+        rightCopy = right;
+        Assert.That(leftCopy.Cross(ref rightCopy), Is.True);
+    }
+
+    [Test]
+    public void Archetypes_Add_DoesNotMergeCollidingMasks() {
+        var world = TestWorlds.Create(Guid.NewGuid().ToString());
+        try {
+            var left = CreateMask(0, 65);
+            var right = CreateMask(64, 65);
+
+            world.archetypes.Add(left, 1, out var leftArchetype, out _);
+            world.archetypes.Add(right, 2, out var rightArchetype, out _);
+
+            Assert.That(leftArchetype, Is.Not.SameAs(rightArchetype));
+            Assert.That(leftArchetype.mask.Equals(rightArchetype.mask), Is.False);
+        }
+        finally {
+            world.Dispose();
+        }
     }
 }

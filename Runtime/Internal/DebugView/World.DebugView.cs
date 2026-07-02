@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Diagnostics;
-using Xeno;
 
 namespace Xeno {
     [DebuggerTypeProxy(typeof(World_Debug))]
@@ -30,19 +29,6 @@ namespace Xeno {
                     while (v != null) {
                         list.Add(v);
                         v = v.next;
-                    }
-                    return list;
-                }
-            }
-
-            [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
-            public List<Store3> Stores {
-                get {
-                    var list = new List<Store3>();
-                    for (int i = 0; i < _world.stores2.Length; i++) {
-                        if (_world.stores2[i] == null) continue;
-
-                        list.Add(_world.stores2[i]);
                     }
                     return list;
                 }

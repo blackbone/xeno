@@ -167,9 +167,9 @@ public class IntegrityChecksOnRemovalsAndSwapsTests {
 
         var archetype = world.entityArchetypes[e1.Id];
 
-        Span<uint> entitiesBefore = archetype.entities[..(int)archetype.entitiesCount];
+        Span<int> entitiesBefore = archetype.entities[..(int)archetype.entitiesCount];
         e1.Destroy();
-        Span<uint> entitiesAfter = archetype.entities[..(int)archetype.entitiesCount];
+        Span<int> entitiesAfter = archetype.entities[..(int)archetype.entitiesCount];
 
         Assert.That(entitiesBefore.Length, Is.GreaterThan(entitiesAfter.Length)); // Should reduce size
     }

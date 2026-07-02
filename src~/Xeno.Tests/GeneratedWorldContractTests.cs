@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 
 namespace Xeno.Tests;
@@ -15,6 +17,10 @@ public class GeneratedWorldContractTests {
         GeneratedWorldPreMutationSystem.Reset();
         GeneratedWorldUpdateMutationSystem.Reset();
         GeneratedWorldPostMutationSystem.Reset();
+        GeneratedPureFirstSystem.Reset();
+        GeneratedPureSecondSystem.Reset();
+        GeneratedInlinePrimitiveSystem.Reset();
+        GeneratedBakeQuerySystem.Reset();
     }
 
     [TearDown]
@@ -23,6 +29,12 @@ public class GeneratedWorldContractTests {
             world.Dispose();
         if (Worlds.TryGet("generated-stage-world", out var stageWorld))
             stageWorld.Dispose();
+        if (Worlds.TryGet("generated-pure-world", out var pureWorld))
+            pureWorld.Dispose();
+        if (Worlds.TryGet("generated-inline-world", out var inlineWorld))
+            inlineWorld.Dispose();
+        if (Worlds.TryGet("generated-bake-query-world", out var bakeQueryWorld))
+            bakeQueryWorld.Dispose();
     }
 
     [Test]
@@ -78,6 +90,78 @@ public class GeneratedWorldContractTests {
         Assert.That(world.RefComponentA(padding).Value, Is.EqualTo(26));
         Assert.That(world.RefComponentB(matching).Value, Is.EqualTo(3));
     }
+
+    [Test]
+    public void GeneratedWorldDoesNotExposeGeneratedNoLockMethods() {
+        var publicDeclaredMethods = typeof(GeneratedStageWorld)
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .Select(method => method.Name);
+
+        Assert.That(publicDeclaredMethods.Where(name => name.Contains("_NoLock")), Is.Empty);
+    }
+
+    [Test]
+    public void GeneratedWorldFusesAdjacentPureSystemsWithSameComponentMask() {
+        var world = new GeneratedPureWorld("generated-pure-world");
+        world.CreateEntity(new ComponentA { Value = 1 });
+        world.CreateEntity(new ComponentA { Value = 10 });
+
+        world.Tick(1f);
+
+        Assert.That(GeneratedPureFirstSystem.Calls.Concat(GeneratedPureSecondSystem.Calls), Is.Empty);
+        Assert.That(GeneratedPureTrace.Calls, Is.EqualTo(new[] {
+            "first:0:1",
+            "second:0:2",
+            "first:1:10",
+            "second:1:11",
+        }));
+    }
+
+    [Test]
+    public void GeneratedWorldSupportsInlineComponentStorage() {
+        var world = new GeneratedInlineWorld("generated-inline-world");
+        var entity = world.CreateEntity(42);
+        var reference = new InlineReferenceComponent { Value = 7 };
+
+        world.Add(entity, reference);
+
+        Assert.That(world.TryGetInt32(entity, out var value), Is.True);
+        Assert.That(value, Is.EqualTo(42));
+        Assert.That(world.RefInt32(entity), Is.EqualTo(42));
+        Assert.That(world.TryGetInlineReferenceComponent(entity, out var storedReference), Is.True);
+        Assert.That(storedReference, Is.SameAs(reference));
+
+        world.Tick(1f);
+        Assert.That(world.TryGetInt32(entity, out value), Is.True);
+        Assert.That(value, Is.EqualTo(43));
+        Assert.That(GeneratedInlinePrimitiveSystem.Calls, Is.EqualTo(1));
+
+        world.RemoveInt32(entity);
+        world.RemoveInlineReferenceComponent(entity);
+
+        Assert.That(world.TryGetInt32(entity, out _), Is.False);
+        Assert.That(world.TryGetInlineReferenceComponent(entity, out _), Is.False);
+    }
+
+    [Test]
+    public void GeneratedWorldSupportsOptInBakedQueryIndexes() {
+        var world = new GeneratedBakeQueryWorld("generated-bake-query-world");
+        var first = world.CreateEntity(new ComponentA { Value = 1 });
+        var second = world.CreateEntity(new ComponentA { Value = 10 }, new ComponentB { Value = 3 });
+        var third = world.CreateEntity(new ComponentA { Value = 20 });
+
+        world.Tick(1f);
+
+        Assert.That(GeneratedBakeQuerySystem.EntityIds, Is.EqualTo(new[] { first.Id, second.Id, third.Id }));
+
+        world.RemoveComponentA(first);
+        world.Add(first, new ComponentA { Value = 30 });
+        GeneratedBakeQuerySystem.Reset();
+
+        world.Tick(1f);
+
+        Assert.That(GeneratedBakeQuerySystem.EntityIds, Is.EqualTo(new[] { first.Id, second.Id, third.Id }));
+    }
 }
 
 [RegisterComponent(typeof(ComponentA))]
@@ -96,6 +180,25 @@ public partial class GeneratedCodegenWorld : World {
 [RegisterSystem(typeof(GeneratedWorldUpdateMutationSystem))]
 [RegisterSystem(typeof(GeneratedWorldPostMutationSystem))]
 public partial class GeneratedStageWorld : World {
+    public partial Entity CreateEntity(in ComponentA componentA, in ComponentB componentB);
+}
+
+[RegisterComponent(typeof(ComponentA))]
+[RegisterSystem(typeof(GeneratedPureFirstSystem))]
+[RegisterSystem(typeof(GeneratedPureSecondSystem))]
+public partial class GeneratedPureWorld : World {
+}
+
+[RegisterComponent(typeof(int), Inline = true)]
+[RegisterComponent(typeof(InlineReferenceComponent), Inline = true)]
+[RegisterSystem(typeof(GeneratedInlinePrimitiveSystem))]
+public partial class GeneratedInlineWorld : World {
+}
+
+[RegisterComponent(typeof(ComponentA))]
+[RegisterComponent(typeof(ComponentB))]
+[RegisterSystem(typeof(GeneratedBakeQuerySystem), bakeQuery: true)]
+public partial class GeneratedBakeQueryWorld : World {
     public partial Entity CreateEntity(in ComponentA componentA, in ComponentB componentB);
 }
 
@@ -148,6 +251,34 @@ public sealed class GeneratedReferenceComponent {
     public int Value;
 }
 
+public sealed class InlineReferenceComponent {
+    public int Value;
+}
+
+public static class GeneratedInlinePrimitiveSystem {
+    public static int Calls;
+
+    public static void Reset() => Calls = 0;
+
+    [SystemMethod(SystemMethodType.Update)]
+    public static void Bump(ref int value) {
+        value++;
+        Calls++;
+    }
+}
+
+public static class GeneratedBakeQuerySystem {
+    public static readonly List<int> EntityIds = new();
+
+    public static void Reset() => EntityIds.Clear();
+
+    [SystemMethod(SystemMethodType.Update)]
+    public static void Track(in Entity entity, ref ComponentA component) {
+        EntityIds.Add(entity.Id);
+        component.Value++;
+    }
+}
+
 public static class GeneratedWorldReferenceSystem {
     public static int Calls;
 
@@ -189,14 +320,14 @@ public static class GeneratedWorldPreMutationSystem {
 
 public static class GeneratedWorldUpdateMutationSystem {
     public static readonly List<float> Deltas = new();
-    public static readonly List<uint> EntityIds = new();
+    public static readonly List<int> EntityIds = new();
 
     public static void Reset() {
         Deltas.Clear();
         EntityIds.Clear();
     }
 
-    [SystemMethod(SystemMethodType.Update, 2, NoFuse = true)]
+    [SystemMethod(SystemMethodType.Update, 2)]
     public static void Apply(in Entity entity, [Uniform(true)] in float delta, ref ComponentA componentA, ref ComponentB componentB) {
         Deltas.Add(delta);
         EntityIds.Add(entity.Id);
@@ -213,5 +344,40 @@ public static class GeneratedWorldPostMutationSystem {
     public static void Finish([Uniform(true)] in float delta, ref ComponentA componentA) {
         Deltas.Add(delta);
         componentA.Value *= 2;
+    }
+}
+
+public static class GeneratedPureTrace {
+    public static readonly List<string> Calls = new();
+}
+
+public static class GeneratedPureFirstSystem {
+    public static readonly List<string> Calls = new();
+
+    public static void Reset() {
+        Calls.Clear();
+        GeneratedPureTrace.Calls.Clear();
+    }
+
+    [SystemMethod(SystemMethodType.Update, 1, pure: true)]
+    public static void Apply(in Entity entity, ref ComponentA componentA) {
+        Calls.Add("unused");
+        GeneratedPureTrace.Calls.Add($"first:{entity.Id}:{componentA.Value}");
+        componentA.Value += 1;
+        Calls.Clear();
+    }
+}
+
+public static class GeneratedPureSecondSystem {
+    public static readonly List<string> Calls = new();
+
+    public static void Reset() => Calls.Clear();
+
+    [SystemMethod(SystemMethodType.Update, 2, Pure = true)]
+    public static void Apply(in Entity entity, ref ComponentA componentA) {
+        Calls.Add("unused");
+        GeneratedPureTrace.Calls.Add($"second:{entity.Id}:{componentA.Value}");
+        componentA.Value += 1;
+        Calls.Clear();
     }
 }

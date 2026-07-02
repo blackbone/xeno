@@ -5,14 +5,15 @@ using System.Threading;
 
 namespace Xeno {
     public abstract partial class World {
-#if XENO_OWNER_THREAD_GUARD_ASSERTS
+#if DEBUG || XENO_OWNER_THREAD_GUARD_ASSERTS
         private int _ownerThreadId;
 #endif
 
+        [Conditional("DEBUG")]
         [Conditional("XENO_OWNER_THREAD_GUARD_ASSERTS")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void AssertOwnerThread() {
-#if XENO_OWNER_THREAD_GUARD_ASSERTS
+#if DEBUG || XENO_OWNER_THREAD_GUARD_ASSERTS
             var currentThreadId = Environment.CurrentManagedThreadId;
             var ownerThreadId = _ownerThreadId;
 
@@ -27,7 +28,7 @@ namespace Xeno {
 #endif
         }
 
-#if XENO_OWNER_THREAD_GUARD_ASSERTS
+#if DEBUG || XENO_OWNER_THREAD_GUARD_ASSERTS
         private static void ThrowWrongThreadMutation(int ownerThreadId, int currentThreadId) {
             throw new InvalidOperationException($"World mutation must stay on the owner thread. Owner={ownerThreadId}, current={currentThreadId}.");
         }
