@@ -4,10 +4,14 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -16,10 +20,49 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
-
-      - name: Restore
-        run: dotnet restore src~/Xeno.sln
+          dotnet-version: 9.0.x
 
       - name: Validate
         run: ./scripts/validate.sh
+
+  diff-hygiene:
+    name: Diff hygiene
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check changed lines for whitespace errors
+        env:
+          DIFF_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DIFF_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import html
+          import os
+          import subprocess
+          import sys
+          import uuid
+
+          comparison = os.environ["DIFF_BASE_SHA"] + "..." + os.environ["DIFF_HEAD_SHA"]
+          result = subprocess.run(["git", "diff", "--check", comparison], capture_output=True, text=True)
+          output = result.stdout + result.stderr
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## Diff hygiene\n\n")
+              if result.returncode:
+                  summary.write("Failed: fix whitespace errors in the PR diff.\n\n<pre>" + html.escape(output) + "</pre>\n")
+              else:
+                  summary.write("Passed: no whitespace errors in the PR diff.\n")
+          if result.returncode:
+              marker = uuid.uuid4().hex
+              print("::stop-commands::" + marker)
+              print(output, end="" if output.endswith("\n") else "\n")
+              print("::" + marker + "::")
+              print("::error title=Diff hygiene failed::The PR diff failed whitespace validation. Remove trailing whitespace and spaces before tabs; see the step summary for file and line details.")
+          sys.exit(result.returncode)
+          PY
