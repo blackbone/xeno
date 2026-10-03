@@ -83,8 +83,8 @@ system registration for new code.
     - [X] Components
     - [X] Systems
     - [X] Entities
-    - [X] API for .NET
-    - [ ] API for Unity
+    - [X] .NET API
+    - [ ] Unity API
     - [X] NuGet package of v1
     - [ ] Documentation
 - [ ] Unity package validation in CI
