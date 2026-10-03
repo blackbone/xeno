@@ -79,12 +79,12 @@ system registration for new code.
 
 # Roadmap
 
-- [ ] Base core implementation wich includes:
+- [ ] Base core implementation which includes:
     - [X] Components
     - [X] Systems
     - [X] Entities
-    - [X] Api for .NET
-    - [ ] Api for Unity
+    - [X] API for .NET
+    - [ ] API for Unity
     - [X] NuGet package of v1
     - [ ] Documentation
 - [ ] Unity package validation in CI
